@@ -110,7 +110,7 @@ export default function ProductsPage() {
           </p>
         </div>
         {/* Add Product Button */}
-        <Link href="/admin/products/new">
+        <Link href="/admin/products/new-product">
           <Button className="bg-white text-black hover:bg-gray-200 cursor-pointer">
             <Plus className="mr-2 h-4 w-4" />
             Add Product
