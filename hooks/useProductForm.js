@@ -33,12 +33,16 @@ export function useProductForm() {
   };
 
   const handleNameChange = (name, short_description) => {
+    const newSlug = generateSlug(name);
+    
     setLocalizationData((prev) => {
       const newMetaTitle =
         prev.meta_title || `${name} - Best Prices in Philippines`;
       const newMetaDescription =
         prev.meta_description ||
         `${short_description || ""} - Best Prices in Philippines`;
+      const newCanonicalUrl = 
+        prev.canonical_url || `https://priceblinker.com/products/${newSlug}`;
 
       return {
         ...prev,
@@ -46,11 +50,12 @@ export function useProductForm() {
         short_description,
         meta_title: newMetaTitle,
         meta_description: newMetaDescription,
+        canonical_url: newCanonicalUrl,
       };
     });
 
     if (!productData.slug) {
-      setProductData((prev) => ({ ...prev, slug: generateSlug(name) }));
+      setProductData((prev) => ({ ...prev, slug: newSlug }));
     }
   };
 
@@ -79,11 +84,13 @@ export function useProductForm() {
       setFetchedData(data);
 
       const processed = ProductService.processFetchedData(data);
+      const generatedSlug = generateSlug(processed.name);
 
       setLocalizationData((prev) => ({
         ...prev,
         brand: processed.brand,
         long_description: processed.longDescription,
+        canonical_url: prev.canonical_url || `https://priceblinker.com/products/${generatedSlug}`,
       }));
 
       handleNameChange(processed.name, processed.shortDescription);
