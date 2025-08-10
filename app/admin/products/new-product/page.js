@@ -1,8 +1,5 @@
-// NewProductPage.jsx
-
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -19,143 +16,47 @@ import BasicInfoTab from "@/components/admin/new-product/BasicInfoTab";
 import SEOTab from "@/components/admin/new-product/SEOTab";
 import ImagesTab from "@/components/admin/new-product/ImagesTab";
 import AvailabilityTab from "@/components/admin/new-product/AvailabilityTab";
-import { supabase } from "@/lib/supabase";
+import { useProductForm } from "@/hooks/useProductForm";
 
 export default function NewProductPage() {
-  const [productData, setProductData] = useState({ slug: "", status: "draft" });
-  const [localizationData, setLocalizationData] = useState({
-    country: "PH",
-    language: "en",
-    name: "",
-    brand: "",
-    short_description: "",
-    long_description: "",
-    meta_title: "",
-    meta_description: "",
-    canonical_url: "",
-    category: "smartphones",
-  });
-  const [specifications, setSpecifications] = useState([]);
-  const [images, setImages] = useState([]);
-  const [availability, setAvailability] = useState([{ country: "PH" }]);
-  const [fetchedData, setFetchedData] = useState(null);
+  const {
+    productData,
+    setProductData,
+    localizationData,
+    setLocalizationData,
+    specifications,
+    setSpecifications,
+    images,
+    setImages,
+    availability,
+    fetchedData,
+    isFetching,
+    sku,
+    setSku,
+    handleNameChange,
+    handleCountryToggle,
+    handleFetchProductData,
+    handleSave,
+  } = useProductForm();
 
-  const fetchedImages = fetchedData?.images
-    ? fetchedData.images.map((img) => img.href)
-    : [];
-
-  const generateSlug = (name) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .trim();
-  };
-
-  const handleNameChange = (name, short_description) => {
-    setLocalizationData((prev) => {
-      const newMetaTitle =
-        prev.meta_title || `${name} - Best Prices in Philippines`;
-
-      const newMetaDescription =
-        prev.meta_description ||
-        `${short_description || ""} - Best Prices in Philippines`;
-
-      return {
-        ...prev,
-        name,
-        short_description,
-        meta_title: newMetaTitle,
-        meta_description: newMetaDescription,
-      };
-    });
-
-    if (!productData.slug) {
-      setProductData((prev) => ({ ...prev, slug: generateSlug(name) }));
-    }
-  };
-
-  const handleCountryToggle = (countryCode) => {
-    setAvailability((prev) => {
-      const exists = prev.some((item) => item.country === countryCode);
-      if (exists) {
-        return prev.filter((item) => item.country !== countryCode);
-      } else {
-        return [...prev, { country: countryCode }];
-      }
-    });
-  };
-
-  const handleSave = async (status) => {
-    try {
-      // 1. Insert into the main 'products' table first
-      const { data: newProduct, error: productError } = await supabase
-        .from("products")
-        .insert({
-          slug: productData.slug,
-          status: status,
-          category: localizationData.category,
-        })
-        .select("id")
-        .single();
-
-      if (productError) throw productError;
-
-      const product_id = newProduct.id;
-
-      // 2. Prepare and insert into the 'product_localizations' table
-      const localizationToInsert = {
-        product_id,
-        country: localizationData.country,
-        language: localizationData.language,
-        name: localizationData.name,
-        brand: localizationData.brand,
-        short_description: localizationData.short_description,
-        long_description: localizationData.long_description,
-        meta_title: localizationData.meta_title,
-        meta_description: localizationData.meta_description,
-        canonical_url: localizationData.canonical_url,
-      };
-      const { error: localizationError } = await supabase
-        .from("product_localizations")
-        .insert(localizationToInsert);
-      if (localizationError) throw localizationError;
-
-      // 3. Prepare data for the remaining tables
-      const specificationsToInsert = specifications.map((spec) => ({
-        product_id,
-        ...spec,
-      }));
-      const imagesToInsert = images.map((img) => ({ product_id, ...img }));
-      const availabilityToInsert = availability.map((av) => ({
-        product_id,
-        ...av,
-      }));
-
-      // 4. Run all inserts concurrently and check for errors
-      const [
-        { error: specError },
-        { error: imageError },
-        { error: availabilityError },
-      ] = await Promise.all([
-        supabase.from("product_specifications").insert(specificationsToInsert),
-        supabase.from("product_images").insert(imagesToInsert),
-        supabase.from("product_availability").insert(availabilityToInsert),
-      ]);
-
-      if (specError || imageError || availabilityError) {
-        throw new Error("Failed to insert related product data.");
-      }
-
-      console.log("Product and all related data saved successfully!", {
-        product_id,
-      });
-      // Handle success, e.g., redirect or show a toast message
-    } catch (error) {
-      console.error("Error saving product:", error.message);
-      // Handle error gracefully, maybe display an error message to the user
-    }
+  // Props object for child components
+  const sharedProps = {
+    productData,
+    setProductData,
+    localizationData,
+    setLocalizationData,
+    specifications,
+    setSpecifications,
+    images,
+    setImages,
+    availability,
+    handleCountryToggle,
+    fetchedData,
+    sku,
+    setSku,
+    isFetching,
+    handleFetchProductData,
+    handleNameChange,
   };
 
   return (
@@ -242,17 +143,7 @@ export default function NewProductPage() {
 
         {/* Tab Content */}
         <TabsContent value="basic" className="space-y-4">
-          <BasicInfoTab
-            productData={productData}
-            setProductData={setProductData}
-            localizationData={localizationData}
-            setLocalizationData={setLocalizationData}
-            specifications={specifications}
-            setSpecifications={setSpecifications}
-            handleNameChange={handleNameChange}
-            fetchedData={fetchedData}
-            setFetchedData={setFetchedData}
-          />
+          <BasicInfoTab {...sharedProps} />
         </TabsContent>
         <TabsContent value="seo" className="space-y-4">
           <SEOTab
@@ -264,7 +155,7 @@ export default function NewProductPage() {
           <ImagesTab
             images={images}
             setImages={setImages}
-            fetchedImages={fetchedImages}
+            fetchedImages={fetchedData?.images?.map((img) => img.href) || []}
           />
         </TabsContent>
         <TabsContent value="availability" className="space-y-4">
