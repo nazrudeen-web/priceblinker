@@ -33,8 +33,6 @@ export default function BasicInfoTab({
   const [sku, setSku] = useState("");
   const [isFetching, setIsFetching] = useState(false);
 
-  const availableCountries = [{ code: "PH", name: "Philippines" }];
-
   // Function to add a new specification
   const handleAddSpecification = () => {
     if (newSpec.key && newSpec.value) {
@@ -175,6 +173,8 @@ export default function BasicInfoTab({
     }
   };
 
+  const availableCountries = [{ code: "PH", name: "Philippines" }];
+
   return (
     <Card className="bg-gray-900 border-gray-800">
       <CardHeader>
@@ -186,261 +186,59 @@ export default function BasicInfoTab({
 
       <CardContent className="space-y-4">
         {/* API URL Section */}
-        <div className="space-y-2">
-          <Label htmlFor="bestBuyApiUrl" className="text-gray-300">
-            Best Buy Product API URL
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              placeholder="e.g., https://api.bestbuy.com/v1/products/123456?apiKey=YOUR_KEY"
-              className="bg-gray-800 border-gray-700 text-white flex-grow"
-              disabled={isFetching}
-              value={sku || ""}
-              onChange={(e) => setSku(e.target.value)}
-            />
-            <Button
-              onClick={handleFetch}
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              disabled={isFetching}
-            >
-              {isFetching ? (
-                <>
-                  <Download className="mr-2 h-4 w-4 animate-bounce" /> Fetching...
-                </>
-              ) : (
-                <>
-                  <Download className="mr-2 h-4 w-4" /> Fetch
-                </>
-              )}
-            </Button>
-          </div>
-          <p className="text-xs text-gray-500">
-            Paste a Best Buy product API URL to auto-fill product details.
-          </p>
-        </div>
+        <ApiUrlSection
+          sku={sku}
+          setSku={setSku}
+          isFetching={isFetching}
+          setIsFetching={setIsFetching}
+          setFetchedData={setFetchedData}
+          setLocalizationData={setLocalizationData}
+          setSpecifications={setSpecifications}
+          handleNameChange={handleNameChange}
+          handleFetch={handleFetch}
+        />
 
         <Separator className="bg-gray-800" />
 
         {/* Product Slug Section */}
-        <div className="space-y-2">
-          <Label htmlFor="slug" className="text-gray-300">
-            Product Slug (URL)
-          </Label>
-          <Input
-            id="slug"
-            placeholder="product-name-in-url"
-            value={productData.slug || ""}
-            onChange={(e) =>
-              setProductData((prev) => ({ ...prev, slug: e.target.value }))
-            }
-            className="bg-gray-800 border-gray-700 text-white"
-          />
-          <p className="text-xs text-gray-500">
-            This will appear in the product URL (e.g., /products/your-slug).
-          </p>
-        </div>
+        <ProductSlugSection
+          productData={productData}
+          setProductData={setProductData}
+        />
 
         <Separator className="bg-gray-800" />
 
         {/* Country and Language Selection */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="country" className="text-gray-300">
-              Country *
-            </Label>
-            <Select
-              value={localizationData.country}
-              onValueChange={(value) =>
-                setLocalizationData((prev) => ({ ...prev, country: value }))
-              }
-            >
-              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                <SelectValue placeholder="Select country" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                {availableCountries.map((country) => (
-                  <SelectItem key={country.code} value={country.code}>
-                    {country.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="language" className="text-gray-300">
-              Language *
-            </Label>
-            <Select
-              value={localizationData.language}
-              onValueChange={(value) =>
-                setLocalizationData((prev) => ({ ...prev, language: value }))
-              }
-            >
-              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="fr">Français</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <LocalizationSection
+          localizationData={localizationData}
+          setLocalizationData={setLocalizationData}
+          availableCountries={availableCountries}
+        />
 
-        {/* Product Name and Brand */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-gray-300">
-              Product Name *
-            </Label>
-            <Input
-              id="name"
-              placeholder="iPhone 15 Pro Max"
-              value={localizationData.name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              className="bg-gray-800 border-gray-700 text-white"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="brand" className="text-gray-300">
-              Brand *
-            </Label>
-            <Input
-              id="brand"
-              placeholder="Apple"
-              value={localizationData.brand}
-              onChange={(e) =>
-                setLocalizationData((prev) => ({
-                  ...prev,
-                  brand: e.target.value,
-                }))
-              }
-              className="bg-gray-800 border-gray-700 text-white"
-            />
-          </div>
-        </div>
-
-        {/* Category */}
-        <div className="space-y-2">
-          <Label htmlFor="category" className="text-gray-300">
-            Category *
-          </Label>
-          <Select
-            value={localizationData.category}
-            onValueChange={(value) =>
-              setLocalizationData((prev) => ({ ...prev, category: value }))
-            }
-          >
-            <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent className="bg-gray-800 border-gray-700">
-              <SelectItem value="smartphones">Smartphones</SelectItem>
-              <SelectItem value="laptops">Laptops</SelectItem>
-              <SelectItem value="tablets">Tablets</SelectItem>
-              <SelectItem value="headphones">Headphones</SelectItem>
-              <SelectItem value="gaming">Gaming</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Product Name, Brand, and Category */}
+        <ProductDetailsSection
+          localizationData={localizationData}
+          setLocalizationData={setLocalizationData}
+          handleNameChange={handleNameChange}
+        />
 
         {/* Descriptions */}
-        <div className="space-y-2">
-          <Label htmlFor="shortDescription" className="text-gray-300">
-            Short Description
-          </Label>
-          <Textarea
-            id="shortDescription"
-            placeholder="Brief description for product listings"
-            value={localizationData.short_description}
-            onChange={(e) =>
-              setLocalizationData((prev) => ({
-                ...prev,
-                short_description: e.target.value,
-              }))
-            }
-            className="bg-gray-800 border-gray-700 text-white"
-            rows={3}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="longDescription" className="text-gray-300">
-            Long Description (Markdown)
-          </Label>
-          <Textarea
-            id="longDescription"
-            placeholder="Detailed product description with markdown support..."
-            value={localizationData.long_description}
-            onChange={(e) =>
-              setLocalizationData((prev) => ({
-                ...prev,
-                long_description: e.target.value,
-              }))
-            }
-            className="bg-gray-800 border-gray-700 text-white min-h-[200px]"
-            rows={3}
-          />
-          <p className="text-xs text-gray-500">
-            You can use markdown formatting for rich text.
-          </p>
-        </div>
+        <DescriptionsSection
+          localizationData={localizationData}
+          setLocalizationData={setLocalizationData}
+        />
 
         <Separator className="bg-gray-800" />
 
         {/* Specifications Section */}
-        <div className="space-y-4">
-          <Label className="text-gray-300">
-            Specifications (product_specifications table)
-          </Label>
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              placeholder="Specification name (e.g., RAM)"
-              value={newSpec.key}
-              onChange={(e) =>
-                setNewSpec((prev) => ({ ...prev, key: e.target.value }))
-              }
-              className="bg-gray-800 border-gray-700 text-white"
-            />
-            <div className="flex gap-2">
-              <Input
-                placeholder="Value (e.g., 8GB)"
-                value={newSpec.value}
-                onChange={(e) =>
-                  setNewSpec((prev) => ({ ...prev, value: e.target.value }))
-                }
-                className="bg-gray-800 border-gray-700 text-white"
-              />
-              <Button
-                onClick={handleAddSpecification}
-                className="bg-white text-black hover:bg-gray-200"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          {specifications.length > 0 && (
-            <div className="space-y-2">
-              {specifications.map((spec, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between bg-gray-800 p-3 rounded"
-                >
-                  <span className="text-white">
-                    <strong>{spec.key}:</strong> {spec.value}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveSpecification(index)}
-                    className="text-red-400 hover:text-red-300 hover:bg-gray-700"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <SpecificationsSection
+          specifications={specifications}
+          setSpecifications={setSpecifications}
+          newSpec={newSpec}
+          setNewSpec={setNewSpec}
+          handleAddSpecification={handleAddSpecification}
+          handleRemoveSpecification={handleRemoveSpecification}
+        />
       </CardContent>
     </Card>
   );

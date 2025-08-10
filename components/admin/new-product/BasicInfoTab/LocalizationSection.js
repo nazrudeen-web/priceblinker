@@ -8,12 +8,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const availableCountries = [{ code: "PH", name: "Philippines" }];
-
 export default function LocalizationSection({
   localizationData,
   setLocalizationData,
 }) {
+  const availableCountries = [{ code: "PH", name: "Philippines" }];
+
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
@@ -38,7 +38,6 @@ export default function LocalizationSection({
           </SelectContent>
         </Select>
       </div>
-      
       <div className="space-y-2">
         <Label htmlFor="language" className="text-gray-300">
           Language *

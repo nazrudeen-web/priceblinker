@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,10 @@ import { Plus, X } from "lucide-react";
 export default function SpecificationsSection({
   specifications,
   setSpecifications,
+  newSpec,
+  setNewSpec,
 }) {
-  const [newSpec, setNewSpec] = useState({ key: "", value: "" });
-
+  // Function to add a new specification
   const handleAddSpecification = () => {
     if (newSpec.key && newSpec.value) {
       setSpecifications((prev) => [
@@ -21,6 +21,7 @@ export default function SpecificationsSection({
     }
   };
 
+  // Function to remove a specification by index
   const handleRemoveSpecification = (index) => {
     setSpecifications((prev) => prev.filter((_, i) => i !== index));
   };

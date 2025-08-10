@@ -44,6 +44,7 @@ export default function DescriptionsSection({
             }))
           }
           className="bg-gray-800 border-gray-700 text-white min-h-[200px]"
+          rows={3}
         />
         <p className="text-xs text-gray-500">
           You can use markdown formatting for rich text.

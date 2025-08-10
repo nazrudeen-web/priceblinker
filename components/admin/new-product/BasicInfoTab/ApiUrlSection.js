@@ -1,42 +1,8 @@
 
-import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-
-// Data cleaning utilities
-const removePatterns = [
-  /\(unlocked\)/gi,
-  /\bunlocked\b/gi,
-  /\bunited states\b/gi,
-];
-
-const excludeKeywords = [
-  "model number",
-  "carrier",
-  "carrier compatibility",
-  "unlocked",
-];
-
-const cleanData = (obj) => {
-  if (typeof obj === "string") {
-    let cleaned = obj;
-    removePatterns.forEach((pattern) => {
-      cleaned = cleaned.replace(pattern, "").trim();
-    });
-    return cleaned.replace(/\s{2,}/g, " ");
-  } else if (Array.isArray(obj)) {
-    return obj.map((item) => cleanData(item));
-  } else if (obj && typeof obj === "object") {
-    const newObj = {};
-    for (const key in obj) {
-      newObj[key] = cleanData(obj[key]);
-    }
-    return newObj;
-  }
-  return obj;
-};
 
 export default function ApiUrlSection({
   sku,
@@ -45,9 +11,43 @@ export default function ApiUrlSection({
   setIsFetching,
   setFetchedData,
   setLocalizationData,
-  handleNameChange,
   setSpecifications,
+  handleNameChange,
 }) {
+  // Words/phrases to remove from values
+  const removePatterns = [
+    /\(unlocked\)/gi, // remove "(Unlocked)"
+    /\bunlocked\b/gi, // remove "Unlocked"
+    /\bunited states\b/gi, // remove "United States"
+  ];
+
+  // Function to clean strings recursively in any object/array
+  const cleanData = (obj) => {
+    if (typeof obj === "string") {
+      let cleaned = obj;
+      removePatterns.forEach((pattern) => {
+        cleaned = cleaned.replace(pattern, "").trim();
+      });
+      return cleaned.replace(/\s{2,}/g, " "); // remove extra spaces
+    } else if (Array.isArray(obj)) {
+      return obj.map((item) => cleanData(item));
+    } else if (obj && typeof obj === "object") {
+      const newObj = {};
+      for (const key in obj) {
+        newObj[key] = cleanData(obj[key]);
+      }
+      return newObj;
+    }
+    return obj;
+  };
+
+  const excludeKeywords = [
+    "model number",
+    "carrier",
+    "carrier compatibility",
+    "unlocked",
+  ];
+
   const handleFetch = async () => {
     if (!sku) {
       alert("Please enter SKU");
@@ -56,7 +56,7 @@ export default function ApiUrlSection({
 
     console.log("Fetching SKU:", sku);
     setIsFetching(true);
-    setFetchedData(null);
+    setFetchedData(null); // reset previous data
 
     try {
       const apiKey = process.env.NEXT_PUBLIC_BESTBUY_KEY;
@@ -69,6 +69,7 @@ export default function ApiUrlSection({
       }
 
       let data = await res.json();
+
       console.log("Data fetched:", data);
 
       data = cleanData(data);
@@ -93,7 +94,7 @@ export default function ApiUrlSection({
         brand: data.manufacturer || "",
         long_description: longDescriptionRaw,
       }));
-
+      
       handleNameChange(
         data.name || "",
         data.shortDescription || shortDescFallback
@@ -105,12 +106,14 @@ export default function ApiUrlSection({
           .filter((item) => {
             const nameLower = (item.name || "").toLowerCase();
 
+            // Check excludeKeywords in lowercase
             if (
               excludeKeywords.some((keyword) => nameLower.includes(keyword))
             ) {
               return false;
             }
 
+            // Skip if key is empty or value is empty
             if (!item.name || item.name.trim() === "") return false;
             if (!item.value || item.value.trim() === "") return false;
 
