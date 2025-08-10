@@ -1,6 +1,6 @@
 // components/product/ImagesTab.jsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -13,8 +13,34 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 
-export default function ImagesTab({ images, setImages }) {
+export default function ImagesTab({ images, setImages, fetchedImages }) {
   const [imageUrl, setImageUrl] = useState("");
+
+  // When fetchedImages changes, add them to images if not already added
+  useEffect(() => {
+    if (fetchedImages.length === 0) return;
+
+    setImages((prev) => {
+      const existingUrls = prev.map((img) => img.image_url);
+
+      // Check if all fetchedImages URLs already exist in images
+      const allExist = fetchedImages.every((url) => existingUrls.includes(url));
+      if (allExist) {
+        // If all URLs exist, don't update state to avoid loop
+        return prev;
+      }
+
+      // Add only new images from fetchedImages
+      const newImages = fetchedImages
+        .filter((url) => !existingUrls.includes(url))
+        .map((url, i) => ({
+          image_url: url,
+          is_main: prev.length === 0 && i === 0, // only if no images before, mark first as main
+        }));
+
+      return [...prev, ...newImages];
+    });
+  }, [fetchedImages, setImages]);
 
   const handleAddImage = () => {
     if (imageUrl) {

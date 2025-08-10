@@ -10,12 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 
 export default function AvailabilityTab({ availability, handleCountryToggle }) {
-  const availableCountries = [
-    { code: "CA", name: "Canada" },
-    { code: "US", name: "United States" },
-    { code: "UK", name: "United Kingdom" },
-    { code: "AU", name: "Australia" },
-  ];
+  const availableCountries = [{ code: "PH", name: "Philippines" }];
 
   return (
     <Card className="bg-gray-900 border-gray-800">

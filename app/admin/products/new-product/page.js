@@ -24,7 +24,7 @@ import { supabase } from "@/lib/supabase";
 export default function NewProductPage() {
   const [productData, setProductData] = useState({ slug: "", status: "draft" });
   const [localizationData, setLocalizationData] = useState({
-    country: "CA",
+    country: "PH",
     language: "en",
     name: "",
     brand: "",
@@ -33,11 +33,16 @@ export default function NewProductPage() {
     meta_title: "",
     meta_description: "",
     canonical_url: "",
-    category: "",
+    category: "smartphones",
   });
   const [specifications, setSpecifications] = useState([]);
   const [images, setImages] = useState([]);
-  const [availability, setAvailability] = useState([{ country: "CA" }]);
+  const [availability, setAvailability] = useState([{ country: "PH" }]);
+  const [fetchedData, setFetchedData] = useState(null);
+
+  const fetchedImages = fetchedData?.images
+    ? fetchedData.images.map((img) => img.href)
+    : [];
 
   const generateSlug = (name) => {
     return name
@@ -48,16 +53,26 @@ export default function NewProductPage() {
       .trim();
   };
 
-  const handleNameChange = (name) => {
-    setLocalizationData((prev) => ({ ...prev, name }));
+  const handleNameChange = (name, short_description) => {
+    setLocalizationData((prev) => {
+      const newMetaTitle =
+        prev.meta_title || `${name} - Best Prices in Philippines`;
+
+      const newMetaDescription =
+        prev.meta_description ||
+        `${short_description || ""} - Best Prices in Philippines`;
+
+      return {
+        ...prev,
+        name,
+        short_description,
+        meta_title: newMetaTitle,
+        meta_description: newMetaDescription,
+      };
+    });
+
     if (!productData.slug) {
       setProductData((prev) => ({ ...prev, slug: generateSlug(name) }));
-    }
-    if (!localizationData.meta_title) {
-      setLocalizationData((prev) => ({
-        ...prev,
-        meta_title: `${name} - Best Prices in Canada`,
-      }));
     }
   };
 
@@ -235,6 +250,8 @@ export default function NewProductPage() {
             specifications={specifications}
             setSpecifications={setSpecifications}
             handleNameChange={handleNameChange}
+            fetchedData={fetchedData}
+            setFetchedData={setFetchedData}
           />
         </TabsContent>
         <TabsContent value="seo" className="space-y-4">
@@ -244,7 +261,11 @@ export default function NewProductPage() {
           />
         </TabsContent>
         <TabsContent value="images" className="space-y-4">
-          <ImagesTab images={images} setImages={setImages} />
+          <ImagesTab
+            images={images}
+            setImages={setImages}
+            fetchedImages={fetchedImages}
+          />
         </TabsContent>
         <TabsContent value="availability" className="space-y-4">
           <AvailabilityTab
