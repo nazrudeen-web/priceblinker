@@ -149,13 +149,31 @@ export default function ProductsPage() {
         throw new Error('Database connection not available. Please check your environment variables.');
       }
 
-      // Delete the product (this will cascade delete related data)
-      const { error } = await supabase
+      // Delete all related records first due to foreign key constraints
+      const deletePromises = [
+        supabase.from('product_localizations').delete().eq('product_id', productId),
+        supabase.from('product_images').delete().eq('product_id', productId),
+        supabase.from('product_specifications').delete().eq('product_id', productId),
+        supabase.from('product_availability').delete().eq('product_id', productId)
+      ];
+
+      // Execute all deletions in parallel
+      const deleteResults = await Promise.all(deletePromises);
+      
+      // Check if any of the related deletions failed
+      const hasError = deleteResults.some(result => result.error);
+      if (hasError) {
+        const errors = deleteResults.filter(result => result.error).map(result => result.error.message);
+        throw new Error(`Failed to delete related data: ${errors.join(', ')}`);
+      }
+
+      // Now delete the main product
+      const { error: productError } = await supabase
         .from('products')
         .delete()
         .eq('id', productId);
 
-      if (error) throw error;
+      if (productError) throw productError;
 
       // Show success message
       alert(`Product "${productName}" has been deleted successfully.`);
