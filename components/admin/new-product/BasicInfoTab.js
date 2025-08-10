@@ -7,19 +7,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Plus, X, Download } from "lucide-react";
+
+// Import sub-components
+import ApiUrlSection from "./BasicInfoTab/ApiUrlSection";
+import ProductSlugSection from "./BasicInfoTab/ProductSlugSection";
+import LocalizationSection from "./BasicInfoTab/LocalizationSection";
+import ProductDetailsSection from "./BasicInfoTab/ProductDetailsSection";
+import DescriptionsSection from "./BasicInfoTab/DescriptionsSection";
+import SpecificationsSection from "./BasicInfoTab/SpecificationsSection";
 
 export default function BasicInfoTab({
   productData,
@@ -187,7 +183,9 @@ export default function BasicInfoTab({
           Enter the basic details about the product and its localization.
         </CardDescription>
       </CardHeader>
+
       <CardContent className="space-y-4">
+        {/* API URL Section */}
         <div className="space-y-2">
           <Label htmlFor="bestBuyApiUrl" className="text-gray-300">
             Best Buy Product API URL
@@ -207,8 +205,7 @@ export default function BasicInfoTab({
             >
               {isFetching ? (
                 <>
-                  <Download className="mr-2 h-4 w-4 animate-bounce" />{" "}
-                  Fetching...
+                  <Download className="mr-2 h-4 w-4 animate-bounce" /> Fetching...
                 </>
               ) : (
                 <>
@@ -217,17 +214,6 @@ export default function BasicInfoTab({
               )}
             </Button>
           </div>
-          {/* {fetchMessage.text && (
-            <p
-              className={`text-xs ${
-                fetchMessage.type === "error"
-                  ? "text-red-400"
-                  : "text-green-400"
-              }`}
-            >
-              {fetchMessage.text}
-            </p>
-          )} */}
           <p className="text-xs text-gray-500">
             Paste a Best Buy product API URL to auto-fill product details.
           </p>
@@ -235,7 +221,7 @@ export default function BasicInfoTab({
 
         <Separator className="bg-gray-800" />
 
-        {/* Product Slug */}
+        {/* Product Slug Section */}
         <div className="space-y-2">
           <Label htmlFor="slug" className="text-gray-300">
             Product Slug (URL)
@@ -392,6 +378,7 @@ export default function BasicInfoTab({
               }))
             }
             className="bg-gray-800 border-gray-700 text-white min-h-[200px]"
+            rows={3}
           />
           <p className="text-xs text-gray-500">
             You can use markdown formatting for rich text.
