@@ -27,12 +27,16 @@ export function useProductForm() {
   const [sku, setSku] = useState("");
 
   const generateSlug = (name) => {
-    return name
+    const baseSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, "")
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-")
-      .trim();
+      .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+    
+    // Add timestamp suffix to ensure uniqueness
+    const timestamp = Date.now().toString().slice(-6);
+    return `${baseSlug}-${timestamp}`;
   };
 
   const handleNameChange = (name, short_description) => {
@@ -89,14 +93,25 @@ export function useProductForm() {
       const processed = ProductService.processFetchedData(data);
       const generatedSlug = generateSlug(processed.name);
 
-      setLocalizationData((prev) => ({
-        ...prev,
-        brand: processed.brand,
-        long_description: processed.longDescription,
-        canonical_url: prev.canonical_url || `https://priceblinker.com/products/${generatedSlug}`,
-      }));
+      // Update all data at once to ensure consistency
+      setLocalizationData((prev) => {
+        const newMetaTitle = `${processed.name} - Best Prices in Philippines`;
+        const newMetaDescription = `${processed.shortDescription || ""} - Best Prices in Philippines`;
+        const newCanonicalUrl = `https://priceblinker.com/products/${generatedSlug}`;
 
-      handleNameChange(processed.name, processed.shortDescription);
+        return {
+          ...prev,
+          name: processed.name,
+          short_description: processed.shortDescription,
+          brand: processed.brand,
+          long_description: processed.longDescription,
+          meta_title: newMetaTitle,
+          meta_description: newMetaDescription,
+          canonical_url: newCanonicalUrl,
+        };
+      });
+
+      setProductData((prev) => ({ ...prev, slug: generatedSlug }));
       setSpecifications(processed.specifications);
       setImages((prev) => [...prev, ...processed.images]);
     } catch (error) {
