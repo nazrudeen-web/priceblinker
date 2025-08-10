@@ -1,8 +1,10 @@
 
 import { useState } from "react";
 import { ProductService } from "@/services/productService";
+import { useToast } from "@/hooks/use-toast";
 
 export function useProductForm() {
+  const { toast } = useToast();
   const [productData, setProductData] = useState({ slug: "", status: "draft" });
   const [localizationData, setLocalizationData] = useState({
     country: "PH",
@@ -21,6 +23,7 @@ export function useProductForm() {
   const [availability, setAvailability] = useState([{ country: "PH" }]);
   const [fetchedData, setFetchedData] = useState(null);
   const [isFetching, setIsFetching] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [sku, setSku] = useState("");
 
   const generateSlug = (name) => {
@@ -104,7 +107,39 @@ export function useProductForm() {
     }
   };
 
+  const resetForm = () => {
+    setProductData({ slug: "", status: "draft" });
+    setLocalizationData({
+      country: "PH",
+      language: "en",
+      name: "",
+      brand: "",
+      short_description: "",
+      long_description: "",
+      meta_title: "",
+      meta_description: "",
+      canonical_url: "",
+      category: "smartphones",
+    });
+    setSpecifications([]);
+    setImages([]);
+    setAvailability([{ country: "PH" }]);
+    setFetchedData(null);
+    setSku("");
+  };
+
   const handleSave = async (status) => {
+    if (!localizationData.name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Product name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    
     try {
       const result = await ProductService.saveProduct({
         productData: { ...productData, status },
@@ -114,10 +149,24 @@ export function useProductForm() {
         availability,
       });
 
+      toast({
+        title: "Success!",
+        description: `Product ${status === "published" ? "published" : "saved as draft"} successfully`,
+      });
+
+      // Reset form after successful save
+      resetForm();
+      
       console.log("Product saved successfully!", result);
     } catch (error) {
       console.error("Error saving product:", error.message);
-      alert("Error saving product: " + error.message);
+      toast({
+        title: "Error",
+        description: "Failed to save product: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -134,6 +183,7 @@ export function useProductForm() {
     availability,
     fetchedData,
     isFetching,
+    isSaving,
     sku,
     setSku,
     
@@ -142,5 +192,6 @@ export function useProductForm() {
     handleCountryToggle,
     handleFetchProductData,
     handleSave,
+    resetForm,
   };
 }

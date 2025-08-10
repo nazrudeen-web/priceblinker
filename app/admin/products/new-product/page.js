@@ -17,6 +17,8 @@ import SEOTab from "@/components/admin/new-product/SEOTab";
 import ImagesTab from "@/components/admin/new-product/ImagesTab";
 import AvailabilityTab from "@/components/admin/new-product/AvailabilityTab";
 import { useProductForm } from "@/hooks/useProductForm";
+import { Toaster } from "@/components/ui/toaster";
+import { Loader2 } from "lucide-react";
 
 export default function NewProductPage() {
   const {
@@ -31,12 +33,14 @@ export default function NewProductPage() {
     availability,
     fetchedData,
     isFetching,
+    isSaving,
     sku,
     setSku,
     handleNameChange,
     handleCountryToggle,
     handleFetchProductData,
     handleSave,
+    resetForm,
   } = useProductForm();
 
   // Props object for child components
@@ -55,8 +59,10 @@ export default function NewProductPage() {
     sku,
     setSku,
     isFetching,
+    isSaving,
     handleFetchProductData,
     handleNameChange,
+    resetForm,
   };
 
   return (
@@ -88,8 +94,13 @@ export default function NewProductPage() {
             variant="outline"
             className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-200 cursor-pointer"
             onClick={() => handleSave("draft")}
+            disabled={isSaving}
           >
-            <Save className="mr-2 h-4 w-4" />
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
             Save Draft
           </Button>
           <Button
@@ -102,8 +113,14 @@ export default function NewProductPage() {
           <Button
             className="bg-white text-black hover:bg-gray-200 cursor-pointer"
             onClick={() => handleSave("published")}
+            disabled={isSaving}
           >
-            Publish
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              "Publish"
+            )}
+            {!isSaving && "Publish"}
           </Button>
         </div>
       </div>
@@ -165,6 +182,7 @@ export default function NewProductPage() {
           />
         </TabsContent>
       </Tabs>
+      <Toaster />
     </div>
   );
 }
