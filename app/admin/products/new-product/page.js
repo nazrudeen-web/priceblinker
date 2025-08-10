@@ -120,7 +120,7 @@ export default function NewProductPage() {
             ) : (
               "Publish"
             )}
-            {!isSaving && "Publish"}
+            {/* {!isSaving && "Publish"} */}
           </Button>
         </div>
       </div>
