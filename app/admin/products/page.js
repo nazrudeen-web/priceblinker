@@ -51,6 +51,11 @@ export default function ProductsPage() {
     try {
       setLoading(true);
       
+      // Check if supabase is available
+      if (!supabase) {
+        throw new Error('Database connection not available. Please configure your Supabase environment variables in the Secrets tool.');
+      }
+      
       // Fetch products with their localizations, images, and availability
       const { data: productsData, error: productsError } = await supabase
         .from('products')
@@ -129,10 +134,22 @@ export default function ProductsPage() {
   );
 
   // Handle product deletion
-  const handleDeleteProduct = async (productId) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+  const handleDeleteProduct = async (productId, productName) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${productName}"?\n\nThis will permanently remove the product and all its related data (images, specifications, etc.). This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
 
     try {
+      setLoading(true);
+      
+      // Check if supabase is available
+      if (!supabase) {
+        throw new Error('Database connection not available. Please check your environment variables.');
+      }
+
+      // Delete the product (this will cascade delete related data)
       const { error } = await supabase
         .from('products')
         .delete()
@@ -140,11 +157,16 @@ export default function ProductsPage() {
 
       if (error) throw error;
 
+      // Show success message
+      alert(`Product "${productName}" has been deleted successfully.`);
+      
       // Refresh the products list
-      fetchProducts();
+      await fetchProducts();
+      
     } catch (error) {
       console.error('Error deleting product:', error);
-      alert('Failed to delete product: ' + error.message);
+      alert(`Failed to delete product "${productName}": ${error.message}`);
+      setLoading(false);
     }
   };
 
@@ -344,7 +366,7 @@ export default function ProductsPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="text-red-400 hover:text-red-300 hover:bg-gray-700"
-                              onClick={() => handleDeleteProduct(product.id)}
+                              onClick={() => handleDeleteProduct(product.id, product.name)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete Product
