@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -66,19 +65,6 @@ export default function AddVariantModal({ isOpen, onClose, onAddVariant }) {
               variant="outline"
               onClick={onClose}
               className="border-gray-700 text-gray-300 hover:bg-gray-800"
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="border-gray-600 text-gray-300 hover:bg-gray-800"
             >
               Cancel
             </Button>
