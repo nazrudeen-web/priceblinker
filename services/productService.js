@@ -167,9 +167,9 @@ export class ProductService {
       }
     });
 
-    // Process images
+    // Process images - limit to first 5 only
     const images = data.images
-      ? data.images.map((img, i) => ({
+      ? data.images.slice(0, 5).map((img, i) => ({
           image_url: img.href,
           is_main: i === 0,
         }))

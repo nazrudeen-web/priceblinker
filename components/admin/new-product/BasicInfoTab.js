@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 
 // Import sub-components
 import ApiUrlSection from "./BasicInfoTab/ApiUrlSection";
@@ -18,6 +19,8 @@ import ProductDetailsSection from "./BasicInfoTab/ProductDetailsSection";
 import VariantDetailsSection from "./BasicInfoTab/VariantDetailsSection";
 import DescriptionsSection from "./BasicInfoTab/DescriptionsSection";
 import SpecificationsSection from "./BasicInfoTab/SpecificationsSection";
+import AddVariantModal from "./BasicInfoTab/AddVariantModal";
+import { ProductService } from "@/services/productService";
 
 
 export default function BasicInfoTab({
@@ -41,6 +44,67 @@ export default function BasicInfoTab({
 }) {
   const [newProductSpec, setNewProductSpec] = useState({ key: "", value: "" });
   const [newVariantSpec, setNewVariantSpec] = useState({ key: "", value: "" });
+  const [showAddVariant, setShowAddVariant] = useState(false);
+
+  const handleAddNewVariant = async (variantSku) => {
+    // Use the same fetch logic but only update variant-specific data
+    try {
+      const data = await ProductService.fetchBestBuyProduct(variantSku);
+      const processed = ProductService.processFetchedData(data);
+      
+      // Create variant name with storage/color info
+      const variantParts = [];
+      if (processed.variantInfo.storage) variantParts.push(processed.variantInfo.storage);
+      if (processed.variantInfo.color) variantParts.push(processed.variantInfo.color);
+      
+      const variantName = variantParts.length > 0 
+        ? `${processed.name} - ${variantParts.join(' ')}`
+        : processed.name;
+
+      const variantSlug = generateSlug(variantName, true);
+
+      // Only update variant-specific data
+      setVariantData((prev) => ({
+        ...prev,
+        sku: processed.sku,
+        slug: variantSlug,
+        color: processed.variantInfo.color,
+        storage: processed.variantInfo.storage,
+        ram: processed.variantInfo.ram,
+      }));
+
+      // Update localization with new variant name
+      setLocalizationData((prev) => ({
+        ...prev,
+        name: variantName,
+        canonical_url: `https://priceblinker.com/products/${variantSlug}`,
+      }));
+
+      setVariantSpecs(processed.variantSpecs);
+      setImages(processed.images); // Will be limited to 5
+
+      setShowAddVariant(false);
+      
+    } catch (error) {
+      console.error("Error fetching variant data:", error);
+    }
+  };
+
+  const generateSlug = (name, isVariant = false) => {
+    const baseSlug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    
+    if (!isVariant) {
+      return baseSlug;
+    }
+    
+    const timestamp = Date.now().toString().slice(-6);
+    return `${baseSlug}-${timestamp}`;
+  };
 
   const handleAddProductSpecification = () => {
     if (newProductSpec.key && newProductSpec.value) {
@@ -77,7 +141,17 @@ export default function BasicInfoTab({
       {/* API Fetch Section - Compact */}
       <Card className="bg-gray-900 border-gray-800">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg text-white">Fetch Product Data</CardTitle>
+          <CardTitle className="text-lg text-white flex items-center justify-between">
+            Fetch Product Data
+            <Button
+              onClick={() => setShowAddVariant(true)}
+              variant="outline"
+              size="sm"
+              className="border-green-600 text-green-400 hover:bg-green-600 hover:text-white"
+            >
+              Add New Variant
+            </Button>
+          </CardTitle>
           <CardDescription className="text-gray-400 text-sm">
             Enter SKU to automatically populate product information
           </CardDescription>
@@ -91,6 +165,15 @@ export default function BasicInfoTab({
           />
         </CardContent>
       </Card>
+
+      {/* Add New Variant Modal */}
+      {showAddVariant && (
+        <AddVariantModal
+          isOpen={showAddVariant}
+          onClose={() => setShowAddVariant(false)}
+          onAddVariant={handleAddNewVariant}
+        />
+      )}
 
       {/* Sub-tabs for organization */}
       <Tabs defaultValue="basic" className="space-y-4">
