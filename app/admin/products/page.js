@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { ProductService } from "@/services/productService";
 
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,68 +51,50 @@ export default function ProductsPage() {
     try {
       setLoading(true);
       
-      // Check if supabase is available
-      if (!supabase) {
-        throw new Error('Database connection not available. Please configure your Supabase environment variables in the Secrets tool.');
-      }
-      
-      // Fetch products with their localizations, images, and availability
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select(`
-          id,
-          slug,
-          status,
-          category,
-          created_at,
-          product_localizations (
-            name,
-            brand,
-            short_description,
-            country,
-            language
-          ),
-          product_images (
-            image_url,
-            is_main
-          ),
-          product_availability (
-            country
-          )
-        `)
-        .order('created_at', { ascending: false });
+      const productsData = await ProductService.getAllProductsWithVariants();
 
-      if (productsError) {
-        throw productsError;
-      }
+      // Transform data for display
+      const transformedProducts = [];
 
-      // Transform data to match the component's expected format
-      const transformedProducts = productsData.map(product => {
-        const mainLocalization = product.product_localizations.find(
-          loc => loc.country === 'PH' && loc.language === 'en'
-        ) || product.product_localizations[0];
+      productsData.forEach(product => {
+        product.product_variants.forEach(variant => {
+          const mainLocalization = variant.product_variant_localizations.find(
+            loc => loc.country === 'PH' && loc.language === 'en'
+          ) || variant.product_variant_localizations[0];
 
-        const mainImage = product.product_images.find(img => img.is_main)?.image_url || 
-                         product.product_images[0]?.image_url || 
-                         "/placeholder.svg?height=40&width=40";
+          const mainImage = variant.product_variant_images.find(img => img.is_main) 
+                           || variant.product_variant_images[0];
 
-        const availableCountries = [...new Set(product.product_availability.map(av => av.country))];
+          // Get countries from product availability
+          const availableCountries = product.product_availability.map(av => av.country);
 
-        return {
-          id: product.id,
-          name: mainLocalization?.name || 'Unnamed Product',
-          brand: mainLocalization?.brand || 'Unknown Brand',
-          category: product.category || 'Uncategorized',
-          status: product.status || 'draft',
-          prices: 0, // You can add price counting logic later
-          countries: availableCountries,
-          image: mainImage,
-          createdAt: new Date(product.created_at).toLocaleDateString(),
-          slug: product.slug,
-        };
+          // Get latest prices
+          const prices = variant.product_prices || [];
+          const latestPrice = prices.length > 0 ? prices[0] : null;
+
+          transformedProducts.push({
+            id: variant.id,
+            productId: product.id,
+            name: mainLocalization?.name || 'Unnamed Product',
+            brand: mainLocalization?.brand || 'Unknown Brand',
+            category: product.category || 'Uncategorized',
+            status: variant.status,
+            sku: variant.sku,
+            slug: variant.slug,
+            color: variant.color,
+            storage: variant.storage,
+            ram: variant.ram,
+            image: mainImage?.image_url,
+            price: latestPrice ? `${latestPrice.currency} ${latestPrice.price}` : 'No price',
+            countries: availableCountries,
+            createdAt: new Date(variant.created_at).toLocaleDateString(),
+            shortDescription: mainLocalization?.short_description || '',
+          });
+        });
       });
 
       setProducts(transformedProducts);
+
     } catch (error) {
       console.error('Error fetching products:', error);
       setError(error.message);
@@ -126,86 +108,65 @@ export default function ProductsPage() {
   }, []);
 
   // Filter products based on search term
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Handle product deletion
-  const handleDeleteProduct = async (productId, productName) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${productName}"?\n\nThis will permanently remove the product and all its related data (images, specifications, etc.). This action cannot be undone.`
-    );
-    
-    if (!confirmed) return;
+  const handleDelete = async (variantId, productName) => {
+    if (!window.confirm(`Are you sure you want to delete "${productName}"?`)) {
+      return;
+    }
 
     try {
-      setLoading(true);
+      await ProductService.deleteProductVariant(variantId);
+      alert(`Product variant "${productName}" has been deleted successfully.`);
       
-      // Check if supabase is available
-      if (!supabase) {
-        throw new Error('Database connection not available. Please check your environment variables.');
-      }
-
-      // Delete all related records first due to foreign key constraints
-      const deletePromises = [
-        supabase.from('product_localizations').delete().eq('product_id', productId),
-        supabase.from('product_images').delete().eq('product_id', productId),
-        supabase.from('product_specifications').delete().eq('product_id', productId),
-        supabase.from('product_availability').delete().eq('product_id', productId)
-      ];
-
-      // Execute all deletions in parallel
-      const deleteResults = await Promise.all(deletePromises);
-      
-      // Check if any of the related deletions failed
-      const hasError = deleteResults.some(result => result.error);
-      if (hasError) {
-        const errors = deleteResults.filter(result => result.error).map(result => result.error.message);
-        throw new Error(`Failed to delete related data: ${errors.join(', ')}`);
-      }
-
-      // Now delete the main product
-      const { error: productError } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productId);
-
-      if (productError) throw productError;
-
-      // Show success message
-      alert(`Product "${productName}" has been deleted successfully.`);
-      
-      // Refresh the products list
-      await fetchProducts();
-      
+      // Refresh the product list
+      fetchProducts();
     } catch (error) {
-      console.error('Error deleting product:', error);
-      alert(`Failed to delete product "${productName}": ${error.message}`);
-      setLoading(false);
+      console.error('Failed to delete product variant:', error);
+      alert(`Failed to delete product variant: ${error.message}`);
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <span className="ml-2 text-gray-400">Loading products...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-400">Error loading products: {error}</p>
-        <Button 
-          onClick={fetchProducts} 
-          className="mt-4 bg-white text-black hover:bg-gray-200"
-        >
-          Retry
-        </Button>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white">Products</h1>
+            <p className="text-gray-400">Manage all product variants in your price comparison platform</p>
+          </div>
+          <Link href="/admin/products/new-product">
+            <Button className="bg-white text-black hover:bg-gray-200 cursor-pointer">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Product
+            </Button>
+          </Link>
+        </div>
+        
+        <Card className="bg-red-900/20 border-red-800">
+          <CardContent className="p-6">
+            <p className="text-red-400">Error loading products: {error}</p>
+            <Button 
+              onClick={fetchProducts} 
+              className="mt-4 bg-red-600 hover:bg-red-700"
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -216,36 +177,35 @@ export default function ProductsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">
-            Products
+            Product Variants
           </h1>
           <p className="text-gray-400">
-            Manage all products in your price comparison platform
+            Manage all product variants in your price comparison platform
           </p>
         </div>
         {/* Add Product Button */}
         <Link href="/admin/products/new-product">
           <Button className="bg-white text-black hover:bg-gray-200 cursor-pointer">
             <Plus className="mr-2 h-4 w-4" />
-            Add Product
+            Add Product Variant
           </Button>
         </Link>
       </div>
 
-      {/* All Products Table Card */}
+      {/* Search and Filter Section */}
       <Card className="bg-gray-900 border-gray-800">
         <CardHeader>
-          <CardTitle className="text-white">All Products ({products.length})</CardTitle>
+          <CardTitle className="text-white">Search & Filter</CardTitle>
           <CardDescription className="text-gray-400">
-            Manage products, their details, and availability
+            Find and manage your product variants
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Search and Filter */}
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search products..."
+                placeholder="Search by name, brand, or SKU..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-gray-800 border-gray-700 text-white"
@@ -256,148 +216,156 @@ export default function ProductsPage() {
               className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
             >
               <Filter className="mr-2 h-4 w-4" />
-              Filter
-            </Button>
-            <Button
-              onClick={fetchProducts}
-              variant="outline"
-              className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
-            >
-              Refresh
+              Filters
             </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Products Table */}
-          <div className="rounded-md border border-gray-800">
+      {/* Products Table */}
+      <Card className="bg-gray-900 border-gray-800">
+        <CardHeader>
+          <CardTitle className="text-white">
+            Product Variants ({filteredProducts.length})
+          </CardTitle>
+          <CardDescription className="text-gray-400">
+            All product variants with their details and availability
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filteredProducts.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-400">No product variants found.</p>
+              <Link href="/admin/products/new-product">
+                <Button className="mt-4 bg-white text-black hover:bg-gray-200">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add First Product Variant
+                </Button>
+              </Link>
+            </div>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow className="border-gray-800">
-                  <TableHead className="text-gray-300">Product</TableHead>
-                  <TableHead className="text-gray-300">Category</TableHead>
-                  <TableHead className="text-gray-300">Status</TableHead>
-                  <TableHead className="text-gray-300">Prices</TableHead>
-                  <TableHead className="text-gray-300">Countries</TableHead>
-                  <TableHead className="text-gray-300">Created</TableHead>
-                  <TableHead className="w-[70px]"></TableHead>
+                  <TableHead className="text-gray-400">Product</TableHead>
+                  <TableHead className="text-gray-400">Variant</TableHead>
+                  <TableHead className="text-gray-400">SKU</TableHead>
+                  <TableHead className="text-gray-400">Category</TableHead>
+                  <TableHead className="text-gray-400">Status</TableHead>
+                  <TableHead className="text-gray-400">Price</TableHead>
+                  <TableHead className="text-gray-400">Countries</TableHead>
+                  <TableHead className="text-gray-400">Created</TableHead>
+                  <TableHead className="text-gray-400 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.length === 0 ? (
-                  <TableRow>
-                    <TableCell 
-                      colSpan={7} 
-                      className="text-center py-8 text-gray-400"
-                    >
-                      {searchTerm ? 'No products found matching your search.' : 'No products found. Add your first product!'}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredProducts.map((product) => (
-                    <TableRow key={product.id} className="border-gray-800">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
+                {filteredProducts.map((product) => (
+                  <TableRow key={product.id} className="border-gray-800">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {product.image && (
                           <img
                             src={product.image}
                             alt={product.name}
                             className="w-10 h-10 rounded object-cover"
-                            onError={(e) => {
-                              e.target.src = "/placeholder.svg?height=40&width=40";
-                            }}
                           />
-                          <div>
-                            <div className="font-medium text-white">
-                              {product.name}
-                            </div>
-                            <div className="text-sm text-gray-400">
-                              {product.brand}
-                            </div>
-                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-white">{product.name}</p>
+                          <p className="text-sm text-gray-400">{product.brand}</p>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-gray-300">
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-gray-300">
+                      <div className="text-sm">
+                        {product.color && <div>Color: {product.color}</div>}
+                        {product.storage && <div>Storage: {product.storage}</div>}
+                        {product.ram && <div>RAM: {product.ram}</div>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-gray-300 font-mono text-sm">
+                      {product.sku}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className="capitalize border-gray-600 text-gray-400"
+                      >
                         {product.category}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            product.status === "published"
-                              ? "default"
-                              : "secondary"
-                          }
-                          className={
-                            product.status === "published"
-                              ? "bg-green-900 text-green-300"
-                              : "bg-yellow-900 text-yellow-300"
-                          }
-                        >
-                          {product.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-gray-300">
-                        {product.prices}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {product.countries.length > 0 ? (
-                            product.countries.map((country) => (
-                              <Badge
-                                key={country}
-                                variant="outline"
-                                className="text-xs border-gray-600 text-gray-400"
-                              >
-                                {country}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-gray-500 text-sm">No countries</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-gray-300">
-                        {product.createdAt}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-gray-800"
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={product.status === "active" ? "default" : "secondary"}
+                        className={
+                          product.status === "active"
+                            ? "bg-green-900 text-green-300 border-green-800"
+                            : "bg-gray-700 text-gray-300 border-gray-600"
+                        }
+                      >
+                        {product.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-gray-300">
+                      {product.price}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {product.countries.length > 0 ? (
+                          product.countries.map((country) => (
+                            <Badge
+                              key={country}
+                              variant="outline"
+                              className="text-xs border-gray-600 text-gray-400"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="bg-gray-800 border-gray-700"
+                              {country}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-gray-500 text-sm">No countries</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-gray-300">
+                      {product.createdAt}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-gray-400 hover:text-white hover:bg-gray-800"
                           >
-                            <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-gray-700">
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-gray-700">
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Product
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-gray-700">
-                              <Globe className="mr-2 h-4 w-4" />
-                              Preview
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-red-400 hover:text-red-300 hover:bg-gray-700"
-                              onClick={() => handleDeleteProduct(product.id, product.name)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Product
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="bg-gray-800 border-gray-700"
+                        >
+                          <DropdownMenuItem className="text-gray-300 hover:bg-gray-700 cursor-pointer">
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-gray-300 hover:bg-gray-700 cursor-pointer">
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-400 hover:bg-red-900/50 cursor-pointer"
+                            onClick={() => handleDelete(product.id, product.name)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

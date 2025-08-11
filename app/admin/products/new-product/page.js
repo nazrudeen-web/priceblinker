@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -24,10 +25,14 @@ export default function NewProductPage() {
   const {
     productData,
     setProductData,
+    variantData,
+    setVariantData,
     localizationData,
     setLocalizationData,
-    specifications,
-    setSpecifications,
+    productSpecs,
+    setProductSpecs,
+    variantSpecs,
+    setVariantSpecs,
     images,
     setImages,
     availability,
@@ -47,10 +52,14 @@ export default function NewProductPage() {
   const sharedProps = {
     productData,
     setProductData,
+    variantData,
+    setVariantData,
     localizationData,
     setLocalizationData,
-    specifications,
-    setSpecifications,
+    productSpecs,
+    setProductSpecs,
+    variantSpecs,
+    setVariantSpecs,
     images,
     setImages,
     availability,
@@ -82,10 +91,10 @@ export default function NewProductPage() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white">
-              Add New Product
+              Add New Product Variant
             </h1>
             <p className="text-gray-400">
-              Create a new product for price comparison
+              Create a new product variant for price comparison
             </p>
           </div>
         </div>
@@ -112,7 +121,7 @@ export default function NewProductPage() {
           </Button>
           <Button
             className="bg-white text-black hover:bg-gray-200 cursor-pointer"
-            onClick={() => handleSave("published")}
+            onClick={() => handleSave("active")}
             disabled={isSaving}
           >
             {isSaving ? (

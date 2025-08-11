@@ -1,4 +1,4 @@
-// / components/product/BasicInfoTab.jsx
+
 import { useState } from "react";
 import {
   Card,
@@ -14,16 +14,21 @@ import ApiUrlSection from "./BasicInfoTab/ApiUrlSection";
 import ProductSlugSection from "./BasicInfoTab/ProductSlugSection";
 import LocalizationSection from "./BasicInfoTab/LocalizationSection";
 import ProductDetailsSection from "./BasicInfoTab/ProductDetailsSection";
+import VariantDetailsSection from "./BasicInfoTab/VariantDetailsSection";
 import DescriptionsSection from "./BasicInfoTab/DescriptionsSection";
 import SpecificationsSection from "./BasicInfoTab/SpecificationsSection";
 
 export default function BasicInfoTab({
   productData,
   setProductData,
+  variantData,
+  setVariantData,
   localizationData,
   setLocalizationData,
-  specifications,
-  setSpecifications,
+  productSpecs,
+  setProductSpecs,
+  variantSpecs,
+  setVariantSpecs,
   handleNameChange,
   fetchedData,
   sku,
@@ -32,22 +37,38 @@ export default function BasicInfoTab({
   handleFetchProductData,
 }) {
   // Local state for adding new specifications
-  const [newSpec, setNewSpec] = useState({ key: "", value: "" });
+  const [newProductSpec, setNewProductSpec] = useState({ key: "", value: "" });
+  const [newVariantSpec, setNewVariantSpec] = useState({ key: "", value: "" });
 
-  // Function to add a new specification
-  const handleAddSpecification = () => {
-    if (newSpec.key && newSpec.value) {
-      setSpecifications((prev) => [
+  // Function to add a new product specification
+  const handleAddProductSpecification = () => {
+    if (newProductSpec.key && newProductSpec.value) {
+      setProductSpecs((prev) => [
         ...prev,
-        { key: newSpec.key, value: newSpec.value },
+        { key: newProductSpec.key, value: newProductSpec.value },
       ]);
-      setNewSpec({ key: "", value: "" });
+      setNewProductSpec({ key: "", value: "" });
     }
   };
 
-  // Function to remove a specification by index
-  const handleRemoveSpecification = (index) => {
-    setSpecifications((prev) => prev.filter((_, i) => i !== index));
+  // Function to add a new variant specification
+  const handleAddVariantSpecification = () => {
+    if (newVariantSpec.key && newVariantSpec.value) {
+      setVariantSpecs((prev) => [
+        ...prev,
+        { key: newVariantSpec.key, value: newVariantSpec.value },
+      ]);
+      setNewVariantSpec({ key: "", value: "" });
+    }
+  };
+
+  // Function to remove specifications
+  const handleRemoveProductSpecification = (index) => {
+    setProductSpecs((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveVariantSpecification = (index) => {
+    setVariantSpecs((prev) => prev.filter((_, i) => i !== index));
   };
 
   const availableCountries = [{ code: "PH", name: "Philippines" }];
@@ -55,9 +76,9 @@ export default function BasicInfoTab({
   return (
     <Card className="bg-gray-900 border-gray-800">
       <CardHeader>
-        <CardTitle className="text-white">Product Information</CardTitle>
+        <CardTitle className="text-white">Product Variant Information</CardTitle>
         <CardDescription className="text-gray-400">
-          Enter the basic details about the product and its localization.
+          Enter the product details and variant-specific information including color, storage, and RAM.
         </CardDescription>
       </CardHeader>
 
@@ -76,6 +97,8 @@ export default function BasicInfoTab({
         <ProductSlugSection
           productData={productData}
           setProductData={setProductData}
+          variantData={variantData}
+          setVariantData={setVariantData}
         />
 
         <Separator className="bg-gray-800" />
@@ -89,9 +112,19 @@ export default function BasicInfoTab({
 
         {/* Product Name, Brand, and Category */}
         <ProductDetailsSection
+          productData={productData}
+          setProductData={setProductData}
           localizationData={localizationData}
           setLocalizationData={setLocalizationData}
           handleNameChange={handleNameChange}
+        />
+
+        <Separator className="bg-gray-800" />
+
+        {/* Variant Details (Color, Storage, RAM, SKU) */}
+        <VariantDetailsSection
+          variantData={variantData}
+          setVariantData={setVariantData}
         />
 
         {/* Descriptions */}
@@ -102,14 +135,30 @@ export default function BasicInfoTab({
 
         <Separator className="bg-gray-800" />
 
-        {/* Specifications Section */}
+        {/* Product-Level Specifications */}
         <SpecificationsSection
-          specifications={specifications}
-          setSpecifications={setSpecifications}
-          newSpec={newSpec}
-          setNewSpec={setNewSpec}
-          handleAddSpecification={handleAddSpecification}
-          handleRemoveSpecification={handleRemoveSpecification}
+          title="Product Specifications"
+          description="Specifications that apply to all variants of this product"
+          specifications={productSpecs}
+          setSpecifications={setProductSpecs}
+          newSpec={newProductSpec}
+          setNewSpec={setNewProductSpec}
+          handleAddSpecification={handleAddProductSpecification}
+          handleRemoveSpecification={handleRemoveProductSpecification}
+        />
+
+        <Separator className="bg-gray-800" />
+
+        {/* Variant-Level Specifications */}
+        <SpecificationsSection
+          title="Variant Specifications"
+          description="Specifications specific to this variant (color, storage, etc.)"
+          specifications={variantSpecs}
+          setSpecifications={setVariantSpecs}
+          newSpec={newVariantSpec}
+          setNewSpec={setNewVariantSpec}
+          handleAddSpecification={handleAddVariantSpecification}
+          handleRemoveSpecification={handleRemoveVariantSpecification}
         />
       </CardContent>
     </Card>

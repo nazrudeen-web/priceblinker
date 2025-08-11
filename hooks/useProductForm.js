@@ -5,7 +5,25 @@ import { useToast } from "@/hooks/use-toast";
 
 export function useProductForm() {
   const { toast } = useToast();
-  const [productData, setProductData] = useState({ slug: "", status: "draft" });
+  
+  // Product level data
+  const [productData, setProductData] = useState({ 
+    slug: "", 
+    status: "active", 
+    category: "smartphones" 
+  });
+  
+  // Variant level data
+  const [variantData, setVariantData] = useState({
+    sku: "",
+    slug: "",
+    color: "",
+    storage: "",
+    ram: "",
+    status: "active"
+  });
+  
+  // Localization data (now for variants)
   const [localizationData, setLocalizationData] = useState({
     country: "PH",
     language: "en",
@@ -16,40 +34,47 @@ export function useProductForm() {
     meta_title: "",
     meta_description: "",
     canonical_url: "",
-    category: "smartphones",
   });
-  const [specifications, setSpecifications] = useState([]);
+  
+  // Specifications (separate for product and variant)
+  const [productSpecs, setProductSpecs] = useState([]);
+  const [variantSpecs, setVariantSpecs] = useState([]);
   const [images, setImages] = useState([]);
   const [availability, setAvailability] = useState([{ country: "PH" }]);
+  
+  // Form states
   const [fetchedData, setFetchedData] = useState(null);
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [sku, setSku] = useState("");
 
-  const generateSlug = (name) => {
+  const generateSlug = (name, isVariant = false) => {
     const baseSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, "")
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-")
-      .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+      .replace(/^-+|-+$/g, "");
     
-    // Add timestamp suffix to ensure uniqueness
+    if (!isVariant) {
+      // For product slugs, keep them simpler
+      return baseSlug;
+    }
+    
+    // For variant slugs, add timestamp to ensure uniqueness
     const timestamp = Date.now().toString().slice(-6);
     return `${baseSlug}-${timestamp}`;
   };
 
   const handleNameChange = (name, short_description) => {
-    const newSlug = generateSlug(name);
+    // Generate both product and variant slugs
+    const productSlug = generateSlug(name.split(' - ')[0]); // Base product name
+    const variantSlug = generateSlug(name, true); // Full variant name
     
     setLocalizationData((prev) => {
-      const newMetaTitle =
-        prev.meta_title || `${name} - Best Prices in Philippines`;
-      const newMetaDescription =
-        prev.meta_description ||
-        `${short_description || ""} - Best Prices in Philippines`;
-      const newCanonicalUrl = 
-        prev.canonical_url || `https://priceblinker.com/products/${newSlug}`;
+      const newMetaTitle = prev.meta_title || `${name} - Best Prices in Philippines`;
+      const newMetaDescription = prev.meta_description || `${short_description || ""} - Best Prices in Philippines`;
+      const newCanonicalUrl = prev.canonical_url || `https://priceblinker.com/products/${variantSlug}`;
 
       return {
         ...prev,
@@ -61,9 +86,9 @@ export function useProductForm() {
       };
     });
 
-    if (!productData.slug) {
-      setProductData((prev) => ({ ...prev, slug: newSlug }));
-    }
+    // Update both product and variant slugs
+    setProductData((prev) => ({ ...prev, slug: productSlug }));
+    setVariantData((prev) => ({ ...prev, slug: variantSlug }));
   };
 
   const handleCountryToggle = (countryCode) => {
@@ -79,7 +104,11 @@ export function useProductForm() {
 
   const handleFetchProductData = async () => {
     if (!sku) {
-      alert("Please enter SKU");
+      toast({
+        title: "Error",
+        description: "Please enter SKU",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -91,39 +120,124 @@ export function useProductForm() {
       setFetchedData(data);
 
       const processed = ProductService.processFetchedData(data);
-      const generatedSlug = generateSlug(processed.name);
+      
+      // Create full product name including variant info
+      const variantParts = [];
+      if (processed.variantInfo.storage) variantParts.push(processed.variantInfo.storage);
+      if (processed.variantInfo.color) variantParts.push(processed.variantInfo.color);
+      
+      const fullName = variantParts.length > 0 
+        ? `${processed.name} - ${variantParts.join(' ')}`
+        : processed.name;
 
-      // Update all data at once to ensure consistency
-      setLocalizationData((prev) => {
-        const newMetaTitle = `${processed.name} - Best Prices in Philippines`;
-        const newMetaDescription = `${processed.shortDescription || ""} - Best Prices in Philippines`;
-        const newCanonicalUrl = `https://priceblinker.com/products/${generatedSlug}`;
+      const productSlug = generateSlug(processed.name);
+      const variantSlug = generateSlug(fullName, true);
 
-        return {
-          ...prev,
-          name: processed.name,
-          short_description: processed.shortDescription,
-          brand: processed.brand,
-          long_description: processed.longDescription,
-          meta_title: newMetaTitle,
-          meta_description: newMetaDescription,
-          canonical_url: newCanonicalUrl,
-        };
+      // Update all data at once
+      setLocalizationData((prev) => ({
+        ...prev,
+        name: fullName,
+        short_description: processed.shortDescription,
+        brand: processed.brand,
+        long_description: processed.longDescription,
+        meta_title: `${fullName} - Best Prices in Philippines`,
+        meta_description: `${processed.shortDescription} - Best Prices in Philippines`,
+        canonical_url: `https://priceblinker.com/products/${variantSlug}`,
+      }));
+
+      setProductData((prev) => ({ 
+        ...prev, 
+        slug: productSlug 
+      }));
+      
+      setVariantData((prev) => ({
+        ...prev,
+        sku: processed.sku,
+        slug: variantSlug,
+        color: processed.variantInfo.color,
+        storage: processed.variantInfo.storage,
+        ram: processed.variantInfo.ram,
+      }));
+
+      setProductSpecs(processed.productSpecs);
+      setVariantSpecs(processed.variantSpecs);
+      setImages(processed.images);
+
+      toast({
+        title: "Success",
+        description: "Product data fetched successfully!",
       });
 
-      setProductData((prev) => ({ ...prev, slug: generatedSlug }));
-      setSpecifications(processed.specifications);
-      setImages((prev) => [...prev, ...processed.images]);
     } catch (error) {
       console.error("Error fetching product:", error);
-      alert("Error fetching product: " + error.message);
+      toast({
+        title: "Error",
+        description: "Error fetching product: " + error.message,
+        variant: "destructive",
+      });
     } finally {
       setIsFetching(false);
     }
   };
 
+  const handleSave = async (status) => {
+    setIsSaving(true);
+    
+    try {
+      // Validation
+      if (!localizationData.name || !variantData.sku) {
+        throw new Error("Product name and SKU are required");
+      }
+
+      const dataToSave = {
+        productData: {
+          ...productData,
+          status,
+        },
+        variantData: {
+          ...variantData,
+          status,
+        },
+        localizationData,
+        productSpecs,
+        variantSpecs,
+        images,
+        availability,
+      };
+
+      const result = await ProductService.saveProductWithVariant(dataToSave);
+      
+      toast({
+        title: "Success",
+        description: `Product variant ${status === "active" ? "published" : "saved as draft"} successfully!`,
+      });
+
+      // Reset form after successful save
+      resetForm();
+      
+      console.log("Product variant saved successfully!", result);
+    } catch (error) {
+      console.error("Error saving product variant:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to save product variant: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const resetForm = () => {
-    setProductData({ slug: "", status: "draft" });
+    setProductData({ slug: "", status: "active", category: "smartphones" });
+    setVariantData({
+      sku: "",
+      slug: "",
+      color: "",
+      storage: "",
+      ram: "",
+      status: "active"
+    });
     setLocalizationData({
       country: "PH",
       language: "en",
@@ -134,65 +248,27 @@ export function useProductForm() {
       meta_title: "",
       meta_description: "",
       canonical_url: "",
-      category: "smartphones",
     });
-    setSpecifications([]);
+    setProductSpecs([]);
+    setVariantSpecs([]);
     setImages([]);
     setAvailability([{ country: "PH" }]);
     setFetchedData(null);
     setSku("");
   };
 
-  const handleSave = async (status) => {
-    if (!localizationData.name.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Product name is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSaving(true);
-    
-    try {
-      const result = await ProductService.saveProduct({
-        productData: { ...productData, status },
-        localizationData,
-        specifications,
-        images,
-        availability,
-      });
-
-      toast({
-        title: "Success!",
-        description: `Product ${status === "published" ? "published" : "saved as draft"} successfully`,
-      });
-
-      // Reset form after successful save
-      resetForm();
-      
-      console.log("Product saved successfully!", result);
-    } catch (error) {
-      console.error("Error saving product:", error.message);
-      toast({
-        title: "Error",
-        description: "Failed to save product: " + error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return {
     // State
     productData,
     setProductData,
+    variantData,
+    setVariantData,
     localizationData,
     setLocalizationData,
-    specifications,
-    setSpecifications,
+    productSpecs,
+    setProductSpecs,
+    variantSpecs,
+    setVariantSpecs,
     images,
     setImages,
     availability,

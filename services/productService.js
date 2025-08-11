@@ -55,6 +55,33 @@ export class ProductService {
     return this.cleanData(data);
   }
 
+  // Extract variant info (color, storage, RAM) from product data
+  static extractVariantInfo(data) {
+    const color = data.color || "";
+    
+    // Extract storage from details or specifications
+    let storage = "";
+    let ram = "";
+    
+    if (data.details) {
+      const storageDetail = data.details.find(d => 
+        d.name && (d.name.toLowerCase().includes('storage') || 
+                  d.name.toLowerCase().includes('capacity') ||
+                  d.name.toLowerCase().includes('memory'))
+      );
+      
+      const ramDetail = data.details.find(d => 
+        d.name && (d.name.toLowerCase().includes('ram') || 
+                  d.name.toLowerCase().includes('system memory'))
+      );
+      
+      if (storageDetail) storage = storageDetail.value || "";
+      if (ramDetail) ram = ramDetail.value || "";
+    }
+
+    return { color, storage, ram };
+  }
+
   // Process fetched data into app format
   static processFetchedData(data) {
     const featuresText =
@@ -69,33 +96,41 @@ export class ProductService {
     const shortDescFallback =
       longDescriptionRaw.split(". ").slice(0, 3).join(". ") + ".";
 
-    // Process specifications
-    const specifications = data.details
-      ? data.details
-          .filter((item) => {
-            const nameLower = (item.name || "").toLowerCase();
-            if (
-              this.excludeKeywords.some((keyword) =>
-                nameLower.includes(keyword)
-              )
-            ) {
-              return false;
-            }
-            if (!item.name || item.name.trim() === "") return false;
-            if (!item.value || item.value.trim() === "") return false;
-            return true;
-          })
-          .map((item) => {
-            let cleanValue = item.value || "";
-            this.removePatterns.forEach((pattern) => {
-              cleanValue = cleanValue.replace(pattern, "").trim();
-            });
-            return {
-              key: item.name || "",
-              value: cleanValue.replace(/\s{2,}/g, " "),
-            };
-          })
-      : [];
+    // Extract variant information
+    const variantInfo = this.extractVariantInfo(data);
+
+    // Process specifications (for both product and variant levels)
+    const allSpecs = data.details || [];
+    const productSpecs = [];
+    const variantSpecs = [];
+
+    allSpecs.forEach(item => {
+      if (!item.name || !item.value) return;
+      
+      const nameLower = item.name.toLowerCase();
+      
+      // Skip excluded keywords
+      if (this.excludeKeywords.some(keyword => nameLower.includes(keyword))) {
+        return;
+      }
+
+      // Variant-specific specs
+      if (nameLower.includes('color') || 
+          nameLower.includes('storage') || 
+          nameLower.includes('memory') ||
+          nameLower.includes('capacity')) {
+        variantSpecs.push({
+          key: item.name,
+          value: item.value
+        });
+      } else {
+        // Product-level specs
+        productSpecs.push({
+          key: item.name,
+          value: item.value
+        });
+      }
+    });
 
     // Process images
     const images = data.images
@@ -106,41 +141,107 @@ export class ProductService {
       : [];
 
     return {
+      // Product level data
       name: data.name || "",
       brand: data.manufacturer || "",
       shortDescription: data.shortDescription || shortDescFallback,
       longDescription: longDescriptionRaw,
-      specifications,
+      sku: data.sku,
+      productSpecs,
+      
+      // Variant level data
+      variantInfo,
+      variantSpecs,
       images,
     };
   }
 
-  // Save product to Supabase
-  static async saveProduct({
+  // Save product with variant to Supabase
+  static async saveProductWithVariant({
     productData,
+    variantData,
     localizationData,
-    specifications,
+    productSpecs,
+    variantSpecs,
     images,
     availability,
   }) {
-    // Insert main product
-    const { data: newProduct, error: productError } = await supabase
+    // Check if product already exists by category and base name
+    let product_id;
+    const baseProductName = localizationData.name.split(' - ')[0]; // Remove variant specific parts
+    
+    const { data: existingProduct } = await supabase
       .from("products")
+      .select("id")
+      .eq("category", productData.category)
+      .eq("slug", productData.slug)
+      .single();
+
+    if (existingProduct) {
+      product_id = existingProduct.id;
+    } else {
+      // Insert main product
+      const { data: newProduct, error: productError } = await supabase
+        .from("products")
+        .insert({
+          slug: productData.slug,
+          status: productData.status,
+          category: productData.category,
+        })
+        .select("id")
+        .single();
+
+      if (productError) throw productError;
+      product_id = newProduct.id;
+
+      // Insert product-level specifications
+      if (productSpecs.length > 0) {
+        const productSpecsToInsert = productSpecs.map((spec) => ({
+          product_id,
+          ...spec,
+        }));
+
+        const { error: productSpecError } = await supabase
+          .from("product_specifications")
+          .insert(productSpecsToInsert);
+
+        if (productSpecError) throw productSpecError;
+      }
+
+      // Insert product availability
+      const availabilityToInsert = availability.map((av) => ({
+        product_id,
+        ...av,
+      }));
+
+      const { error: availabilityError } = await supabase
+        .from("product_availability")
+        .insert(availabilityToInsert);
+
+      if (availabilityError) throw availabilityError;
+    }
+
+    // Insert product variant
+    const { data: newVariant, error: variantError } = await supabase
+      .from("product_variants")
       .insert({
-        slug: productData.slug,
-        status: productData.status,
-        category: localizationData.category,
+        product_id,
+        storage: variantData.storage,
+        ram: variantData.ram,
+        color: variantData.color,
+        sku: variantData.sku,
+        slug: variantData.slug,
+        status: variantData.status,
       })
       .select("id")
       .single();
 
-    if (productError) throw productError;
+    if (variantError) throw variantError;
+    const variant_id = newVariant.id;
 
-    const product_id = newProduct.id;
-
-    // Insert localization
-    const localizationToInsert = {
-      product_id,
+    // Insert variant localization
+    const variantLocalizationToInsert = {
+      product_variant_id: variant_id,
       country: localizationData.country,
       language: localizationData.language,
       name: localizationData.name,
@@ -153,37 +254,154 @@ export class ProductService {
     };
 
     const { error: localizationError } = await supabase
-      .from("product_localizations")
-      .insert(localizationToInsert);
+      .from("product_variant_localizations")
+      .insert(variantLocalizationToInsert);
 
     if (localizationError) throw localizationError;
 
-    // Prepare related data
-    const specificationsToInsert = specifications.map((spec) => ({
-      product_id,
-      ...spec,
-    }));
-    const imagesToInsert = images.map((img) => ({ product_id, ...img }));
-    const availabilityToInsert = availability.map((av) => ({
-      product_id,
-      ...av,
-    }));
+    // Insert variant specifications
+    if (variantSpecs.length > 0) {
+      const variantSpecsToInsert = variantSpecs.map((spec) => ({
+        product_variant_id: variant_id,
+        ...spec,
+      }));
 
-    // Insert all related data
-    const [
-      { error: specError },
-      { error: imageError },
-      { error: availabilityError },
-    ] = await Promise.all([
-      supabase.from("product_specifications").insert(specificationsToInsert),
-      supabase.from("product_images").insert(imagesToInsert),
-      supabase.from("product_availability").insert(availabilityToInsert),
-    ]);
+      const { error: variantSpecError } = await supabase
+        .from("product_variant_specifications")
+        .insert(variantSpecsToInsert);
 
-    if (specError || imageError || availabilityError) {
-      throw new Error("Failed to insert related product data.");
+      if (variantSpecError) throw variantSpecError;
     }
 
-    return { product_id };
+    // Insert variant images
+    const imagesToInsert = images.map((img) => ({ 
+      product_variant_id: variant_id, 
+      ...img 
+    }));
+
+    const { error: imageError } = await supabase
+      .from("product_variant_images")
+      .insert(imagesToInsert);
+
+    if (imageError) throw imageError;
+
+    return { product_id, variant_id };
+  }
+
+  // Get all products with their variants for listing
+  static async getAllProductsWithVariants() {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        id,
+        slug,
+        status,
+        category,
+        created_at,
+        product_variants (
+          id,
+          sku,
+          slug,
+          color,
+          storage,
+          ram,
+          status,
+          created_at,
+          product_variant_localizations (
+            name,
+            brand,
+            short_description,
+            country,
+            language
+          ),
+          product_variant_images (
+            image_url,
+            is_main
+          ),
+          product_prices (
+            price,
+            currency,
+            store_name,
+            country
+          )
+        ),
+        product_availability (
+          country
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Delete product variant and clean up if no more variants exist
+  static async deleteProductVariant(variantId) {
+    // First get the product_id for this variant
+    const { data: variant, error: variantError } = await supabase
+      .from('product_variants')
+      .select('product_id')
+      .eq('id', variantId)
+      .single();
+
+    if (variantError) throw variantError;
+
+    const productId = variant.product_id;
+
+    // Delete all variant-related data
+    const deletePromises = [
+      supabase.from('product_variant_localizations').delete().eq('product_variant_id', variantId),
+      supabase.from('product_variant_images').delete().eq('product_variant_id', variantId),
+      supabase.from('product_variant_specifications').delete().eq('product_variant_id', variantId),
+      supabase.from('product_prices').delete().eq('product_variant_id', variantId)
+    ];
+
+    const deleteResults = await Promise.all(deletePromises);
+    const hasError = deleteResults.some(result => result.error);
+    if (hasError) {
+      const errors = deleteResults.filter(result => result.error).map(result => result.error.message);
+      throw new Error(`Failed to delete variant data: ${errors.join(', ')}`);
+    }
+
+    // Delete the variant
+    const { error: deleteVariantError } = await supabase
+      .from('product_variants')
+      .delete()
+      .eq('id', variantId);
+
+    if (deleteVariantError) throw deleteVariantError;
+
+    // Check if this was the last variant for this product
+    const { data: remainingVariants, error: checkError } = await supabase
+      .from('product_variants')
+      .select('id')
+      .eq('product_id', productId);
+
+    if (checkError) throw checkError;
+
+    // If no more variants, delete the product and its related data
+    if (remainingVariants.length === 0) {
+      const productDeletePromises = [
+        supabase.from('product_specifications').delete().eq('product_id', productId),
+        supabase.from('product_availability').delete().eq('product_id', productId)
+      ];
+
+      const productDeleteResults = await Promise.all(productDeletePromises);
+      const hasProductError = productDeleteResults.some(result => result.error);
+      if (hasProductError) {
+        const errors = productDeleteResults.filter(result => result.error).map(result => result.error.message);
+        throw new Error(`Failed to delete product data: ${errors.join(', ')}`);
+      }
+
+      // Delete the product
+      const { error: deleteProductError } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productId);
+
+      if (deleteProductError) throw deleteProductError;
+    }
+
+    return { productId, deletedProduct: remainingVariants.length === 0 };
   }
 }
