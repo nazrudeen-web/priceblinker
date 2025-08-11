@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -36,6 +35,8 @@ export default function NewProductPage() {
     images,
     setImages,
     availability,
+    prices,
+    setPrices,
     fetchedData,
     isFetching,
     isSaving,
@@ -63,6 +64,8 @@ export default function NewProductPage() {
     images,
     setImages,
     availability,
+    prices,
+    setPrices,
     handleCountryToggle,
     fetchedData,
     sku,

@@ -17,6 +17,7 @@ import ProductDetailsSection from "./BasicInfoTab/ProductDetailsSection";
 import VariantDetailsSection from "./BasicInfoTab/VariantDetailsSection";
 import DescriptionsSection from "./BasicInfoTab/DescriptionsSection";
 import SpecificationsSection from "./BasicInfoTab/SpecificationsSection";
+import PricingSection from "./BasicInfoTab/PricingSection";
 
 export default function BasicInfoTab({
   productData,
@@ -29,6 +30,8 @@ export default function BasicInfoTab({
   setProductSpecs,
   variantSpecs,
   setVariantSpecs,
+  prices,
+  setPrices,
   handleNameChange,
   fetchedData,
   sku,
@@ -159,6 +162,14 @@ export default function BasicInfoTab({
           setNewSpec={setNewVariantSpec}
           handleAddSpecification={handleAddVariantSpecification}
           handleRemoveSpecification={handleRemoveVariantSpecification}
+        />
+
+        <Separator className="bg-gray-800" />
+
+        {/* Pricing Section */}
+        <PricingSection
+          prices={prices}
+          setPrices={setPrices}
         />
       </CardContent>
     </Card>

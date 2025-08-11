@@ -64,19 +64,53 @@ export class ProductService {
     let ram = "";
     
     if (data.details) {
+      // Look for storage-related details
       const storageDetail = data.details.find(d => 
-        d.name && (d.name.toLowerCase().includes('storage') || 
-                  d.name.toLowerCase().includes('capacity') ||
-                  d.name.toLowerCase().includes('memory'))
+        d.name && (
+          d.name.toLowerCase().includes('storage') || 
+          d.name.toLowerCase().includes('internal storage') ||
+          d.name.toLowerCase().includes('built-in storage') ||
+          d.name.toLowerCase().includes('capacity')
+        )
       );
       
+      // Look for RAM-related details  
       const ramDetail = data.details.find(d => 
-        d.name && (d.name.toLowerCase().includes('ram') || 
-                  d.name.toLowerCase().includes('system memory'))
+        d.name && (
+          d.name.toLowerCase().includes('ram') || 
+          d.name.toLowerCase().includes('system memory') ||
+          d.name.toLowerCase().includes('memory')
+        )
       );
       
-      if (storageDetail) storage = storageDetail.value || "";
-      if (ramDetail) ram = ramDetail.value || "";
+      // Look for battery details that might be incorrectly mapped
+      const batteryDetail = data.details.find(d => 
+        d.name && (
+          d.name.toLowerCase().includes('battery') ||
+          d.name.toLowerCase().includes('milliampere')
+        )
+      );
+      
+      if (storageDetail && !storageDetail.value.toLowerCase().includes('milliampere') && 
+          !storageDetail.value.toLowerCase().includes('fps')) {
+        storage = storageDetail.value || "";
+      }
+      
+      if (ramDetail && !ramDetail.value.toLowerCase().includes('milliampere') && 
+          !ramDetail.value.toLowerCase().includes('fps')) {
+        ram = ramDetail.value || "";
+      }
+      
+      // If storage is still empty, try to find it from name patterns
+      if (!storage) {
+        const possibleStorage = data.details.find(d => 
+          d.value && (d.value.includes('GB') || d.value.includes('TB')) &&
+          !d.value.toLowerCase().includes('milliampere') &&
+          !d.value.toLowerCase().includes('fps') &&
+          !d.value.toLowerCase().includes('battery')
+        );
+        if (possibleStorage) storage = possibleStorage.value;
+      }
     }
 
     return { color, storage, ram };
@@ -108,23 +142,25 @@ export class ProductService {
       if (!item.name || !item.value) return;
       
       const nameLower = item.name.toLowerCase();
+      const valueLower = item.value.toLowerCase();
       
       // Skip excluded keywords
       if (this.excludeKeywords.some(keyword => nameLower.includes(keyword))) {
         return;
       }
 
-      // Variant-specific specs
+      // Variant-specific specs (color, storage, RAM, etc.)
       if (nameLower.includes('color') || 
-          nameLower.includes('storage') || 
-          nameLower.includes('memory') ||
-          nameLower.includes('capacity')) {
+          (nameLower.includes('storage') && !valueLower.includes('milliampere') && !valueLower.includes('fps')) || 
+          (nameLower.includes('memory') && !valueLower.includes('milliampere') && !valueLower.includes('fps')) ||
+          (nameLower.includes('capacity') && !valueLower.includes('milliampere')) ||
+          nameLower.includes('ram')) {
         variantSpecs.push({
           key: item.name,
           value: item.value
         });
       } else {
-        // Product-level specs
+        // Product-level specs (everything else including battery, camera, etc.)
         productSpecs.push({
           key: item.name,
           value: item.value
@@ -165,6 +201,7 @@ export class ProductService {
     variantSpecs,
     images,
     availability,
+    prices,
   }) {
     // Check if product already exists by category and base name
     let product_id;
@@ -284,6 +321,20 @@ export class ProductService {
       .insert(imagesToInsert);
 
     if (imageError) throw imageError;
+
+    // Insert variant prices
+    if (prices && prices.length > 0) {
+      const pricesToInsert = prices.map((price) => ({ 
+        product_variant_id: variant_id, 
+        ...price 
+      }));
+
+      const { error: priceError } = await supabase
+        .from("product_prices")
+        .insert(pricesToInsert);
+
+      if (priceError) throw priceError;
+    }
 
     return { product_id, variant_id };
   }
