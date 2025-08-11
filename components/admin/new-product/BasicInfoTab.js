@@ -1,5 +1,3 @@
-
-
 import { useState } from "react";
 import {
   Card,
@@ -34,7 +32,7 @@ export default function BasicInfoTab({
   setProductSpecs,
   variantSpecs,
   setVariantSpecs,
-  
+
   handleNameChange,
   fetchedData,
   sku,
@@ -51,13 +49,13 @@ export default function BasicInfoTab({
     try {
       const data = await ProductService.fetchBestBuyProduct(variantSku);
       const processed = ProductService.processFetchedData(data);
-      
+
       // Create variant name with storage/color info
       const variantParts = [];
       if (processed.variantInfo.storage) variantParts.push(processed.variantInfo.storage);
       if (processed.variantInfo.color) variantParts.push(processed.variantInfo.color);
-      
-      const variantName = variantParts.length > 0 
+
+      const variantName = variantParts.length > 0
         ? `${processed.name} - ${variantParts.join(' ')}`
         : processed.name;
 
@@ -81,10 +79,15 @@ export default function BasicInfoTab({
       }));
 
       setVariantSpecs(processed.variantSpecs);
-      setImages(processed.images); // Will be limited to 5
+      // Assuming setImages is a function available in the scope or passed down
+      // If setImages is intended to update the images in variantData, it should be handled there.
+      // For now, assuming it's a placeholder or meant to be handled within VariantDetailsSection or its parent.
+      // If ProductService.processFetchedData returns images, and you want to update state:
+      // setVariantData(prev => ({ ...prev, images: processed.images.slice(0, 5) }));
+
 
       setShowAddVariant(false);
-      
+
     } catch (error) {
       console.error("Error fetching variant data:", error);
     }
@@ -97,11 +100,11 @@ export default function BasicInfoTab({
       .replace(/\s+/g, "-")
       .replace(/-+/g, "-")
       .replace(/^-+|-+$/g, "");
-    
+
     if (!isVariant) {
       return baseSlug;
     }
-    
+
     const timestamp = Date.now().toString().slice(-6);
     return `${baseSlug}-${timestamp}`;
   };
@@ -243,19 +246,20 @@ export default function BasicInfoTab({
         {/* Variant Details */}
         <TabsContent value="variant" className="space-y-4">
           <Card className="bg-gray-900 border-gray-800">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-white">Variant Details</CardTitle>
-              <CardDescription className="text-gray-400 text-sm">
-                Color, storage, RAM, and other variant-specific information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <VariantDetailsSection
-                variantData={variantData}
-                setVariantData={setVariantData}
-              />
-            </CardContent>
-          </Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg text-white">Variant Details</CardTitle>
+                <CardDescription className="text-gray-400 text-sm">
+                  Color, storage, RAM, and other variant-specific information
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <VariantDetailsSection
+                  variantData={variantData}
+                  setVariantData={setVariantData}
+                  onAddVariant={handleAddNewVariant}
+                />
+              </CardContent>
+            </Card>
         </TabsContent>
 
         {/* Specifications */}
@@ -304,10 +308,7 @@ export default function BasicInfoTab({
             </Card>
           </div>
         </TabsContent>
-
-        
       </Tabs>
     </div>
   );
 }
-

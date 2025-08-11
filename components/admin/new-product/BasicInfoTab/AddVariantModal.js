@@ -65,6 +65,19 @@ export default function AddVariantModal({ isOpen, onClose, onAddVariant }) {
             <Button
               variant="outline"
               onClick={onClose}
+              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+            <Button
+              variant="outline"
+              onClick={onClose}
               className="border-gray-600 text-gray-300 hover:bg-gray-800"
             >
               Cancel

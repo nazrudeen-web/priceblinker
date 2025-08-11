@@ -1,19 +1,46 @@
 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { useState } from "react";
+import AddVariantModal from "./AddVariantModal";
 
 export default function VariantDetailsSection({
   variantData,
   setVariantData,
+  onAddVariant,
 }) {
+  const [showAddVariant, setShowAddVariant] = useState(false);
+
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-medium text-white mb-3">Variant Details</h3>
-        <p className="text-sm text-gray-400 mb-4">
-          Specify the variant-specific attributes like color, storage, and RAM
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-lg font-medium text-white mb-3">Variant Details</h3>
+          <p className="text-sm text-gray-400 mb-4">
+            Specify the variant-specific attributes like color, storage, and RAM
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowAddVariant(true)}
+          variant="outline"
+          size="sm"
+          className="border-green-600 text-green-400 hover:bg-green-600 hover:text-white"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add New Variant
+        </Button>
       </div>
+
+      {/* Add New Variant Modal */}
+      {showAddVariant && (
+        <AddVariantModal
+          isOpen={showAddVariant}
+          onClose={() => setShowAddVariant(false)}
+          onAddVariant={onAddVariant}
+        />
+      )}</div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="space-y-2">

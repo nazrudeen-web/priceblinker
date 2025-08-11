@@ -170,7 +170,26 @@ export default function NewProductPage() {
 
         {/* Tab Content */}
         <TabsContent value="basic" className="space-y-4">
-          <BasicInfoTab {...sharedProps} />
+          <BasicInfoTab
+            productData={productData}
+            setProductData={setProductData}
+            variantData={variantData}
+            setVariantData={setVariantData}
+            localizationData={localizationData}
+            setLocalizationData={setLocalizationData}
+            productSpecs={productSpecs}
+            setProductSpecs={setProductSpecs}
+            variantSpecs={variantSpecs}
+            setVariantSpecs={setVariantSpecs}
+            images={images}
+            setImages={setImages}
+            handleNameChange={handleNameChange}
+            fetchedData={fetchedData}
+            sku={sku}
+            setSku={setSku}
+            isFetching={isFetching}
+            handleFetchProductData={handleFetchProductData}
+          />
         </TabsContent>
         <TabsContent value="seo" className="space-y-4">
           <SEOTab
