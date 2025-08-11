@@ -17,6 +17,8 @@ import {
   LogOut,
   Users,
   BarChart2,
+  Plus,
+  PlusCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,9 +35,14 @@ const sidebarItems = [
     icon: Package,
   },
   {
-    title: "Prices",
-    href: "/admin/prices",
-    icon: DollarSign,
+    title: "Add Product",
+    href: "/admin/products/new-product",
+    icon: Plus,
+  },
+  {
+    title: "Add Price",
+    href: "/admin/prices/add",
+    icon: PlusCircle,
   },
   // {
   //   title: "Stores",
@@ -106,8 +113,7 @@ function Sidebar({ className }) {
                     : "text-gray-400 hover:text-white"
                 )}
               >
-                <item.icon className="h-4 w-4" />{" "}
-                {/* Render icon dynamically */}
+                <item.icon className="h-4 w-4" /> {/* Render icon dynamically */}
                 {item.title}
               </Link>
             ))}
@@ -134,7 +140,7 @@ export default function AdminLayout({ children }) {
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr] bg-gray-950">
       {/* Desktop Sidebar */}
-      <div className="hidden  border-r border-gray-800 md:block">
+      <div className="hidden border-r border-gray-800 md:block">
         <Sidebar />
       </div>
       {/* Main Content Area */}

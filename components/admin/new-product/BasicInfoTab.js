@@ -1,4 +1,5 @@
 
+
 import { useState } from "react";
 import {
   Card,
@@ -7,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Import sub-components
 import ApiUrlSection from "./BasicInfoTab/ApiUrlSection";
@@ -39,11 +40,9 @@ export default function BasicInfoTab({
   isFetching,
   handleFetchProductData,
 }) {
-  // Local state for adding new specifications
   const [newProductSpec, setNewProductSpec] = useState({ key: "", value: "" });
   const [newVariantSpec, setNewVariantSpec] = useState({ key: "", value: "" });
 
-  // Function to add a new product specification
   const handleAddProductSpecification = () => {
     if (newProductSpec.key && newProductSpec.value) {
       setProductSpecs((prev) => [
@@ -54,7 +53,6 @@ export default function BasicInfoTab({
     }
   };
 
-  // Function to add a new variant specification
   const handleAddVariantSpecification = () => {
     if (newVariantSpec.key && newVariantSpec.value) {
       setVariantSpecs((prev) => [
@@ -65,7 +63,6 @@ export default function BasicInfoTab({
     }
   };
 
-  // Function to remove specifications
   const handleRemoveProductSpecification = (index) => {
     setProductSpecs((prev) => prev.filter((_, i) => i !== index));
   };
@@ -77,101 +74,177 @@ export default function BasicInfoTab({
   const availableCountries = [{ code: "PH", name: "Philippines" }];
 
   return (
-    <Card className="bg-gray-900 border-gray-800">
-      <CardHeader>
-        <CardTitle className="text-white">Product Variant Information</CardTitle>
-        <CardDescription className="text-gray-400">
-          Enter the product details and variant-specific information including color, storage, and RAM.
-        </CardDescription>
-      </CardHeader>
+    <div className="space-y-4">
+      {/* API Fetch Section - Compact */}
+      <Card className="bg-gray-900 border-gray-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg text-white">Fetch Product Data</CardTitle>
+          <CardDescription className="text-gray-400 text-sm">
+            Enter SKU to automatically populate product information
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ApiUrlSection
+            sku={sku}
+            setSku={setSku}
+            isFetching={isFetching}
+            handleFetch={handleFetchProductData}
+          />
+        </CardContent>
+      </Card>
 
-      <CardContent className="space-y-4">
-        {/* API URL Section */}
-        <ApiUrlSection
-          sku={sku}
-          setSku={setSku}
-          isFetching={isFetching}
-          handleFetch={handleFetchProductData}
-        />
+      {/* Sub-tabs for organization */}
+      <Tabs defaultValue="basic" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4 bg-gray-800">
+          <TabsTrigger value="basic" className="data-[state=active]:bg-gray-700 text-sm">
+            Basic
+          </TabsTrigger>
+          <TabsTrigger value="variant" className="data-[state=active]:bg-gray-700 text-sm">
+            Variant
+          </TabsTrigger>
+          <TabsTrigger value="specs" className="data-[state=active]:bg-gray-700 text-sm">
+            Specs
+          </TabsTrigger>
+          <TabsTrigger value="pricing" className="data-[state=active]:bg-gray-700 text-sm">
+            Pricing
+          </TabsTrigger>
+        </TabsList>
 
-        <Separator className="bg-gray-800" />
+        {/* Basic Information */}
+        <TabsContent value="basic" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="bg-gray-900 border-gray-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg text-white">Product Info</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <LocalizationSection
+                  localizationData={localizationData}
+                  setLocalizationData={setLocalizationData}
+                  availableCountries={availableCountries}
+                />
+                <ProductDetailsSection
+                  productData={productData}
+                  setProductData={setProductData}
+                  localizationData={localizationData}
+                  setLocalizationData={setLocalizationData}
+                  handleNameChange={handleNameChange}
+                />
+              </CardContent>
+            </Card>
 
-        {/* Product Slug Section */}
-        <ProductSlugSection
-          productData={productData}
-          setProductData={setProductData}
-          variantData={variantData}
-          setVariantData={setVariantData}
-        />
+            <Card className="bg-gray-900 border-gray-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg text-white">URLs & Slugs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ProductSlugSection
+                  productData={productData}
+                  setProductData={setProductData}
+                  variantData={variantData}
+                  setVariantData={setVariantData}
+                />
+              </CardContent>
+            </Card>
+          </div>
 
-        <Separator className="bg-gray-800" />
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg text-white">Descriptions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DescriptionsSection
+                localizationData={localizationData}
+                setLocalizationData={setLocalizationData}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        {/* Country and Language Selection */}
-        <LocalizationSection
-          localizationData={localizationData}
-          setLocalizationData={setLocalizationData}
-          availableCountries={availableCountries}
-        />
+        {/* Variant Details */}
+        <TabsContent value="variant" className="space-y-4">
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg text-white">Variant Details</CardTitle>
+              <CardDescription className="text-gray-400 text-sm">
+                Color, storage, RAM, and other variant-specific information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <VariantDetailsSection
+                variantData={variantData}
+                setVariantData={setVariantData}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        {/* Product Name, Brand, and Category */}
-        <ProductDetailsSection
-          productData={productData}
-          setProductData={setProductData}
-          localizationData={localizationData}
-          setLocalizationData={setLocalizationData}
-          handleNameChange={handleNameChange}
-        />
+        {/* Specifications */}
+        <TabsContent value="specs" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="bg-gray-900 border-gray-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg text-white">Product Specs</CardTitle>
+                <CardDescription className="text-gray-400 text-sm">
+                  Specifications shared across all variants
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SpecificationsSection
+                  title=""
+                  description=""
+                  specifications={productSpecs}
+                  setSpecifications={setProductSpecs}
+                  newSpec={newProductSpec}
+                  setNewSpec={setNewProductSpec}
+                  handleAddSpecification={handleAddProductSpecification}
+                  handleRemoveSpecification={handleRemoveProductSpecification}
+                />
+              </CardContent>
+            </Card>
 
-        <Separator className="bg-gray-800" />
+            <Card className="bg-gray-900 border-gray-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg text-white">Variant Specs</CardTitle>
+                <CardDescription className="text-gray-400 text-sm">
+                  Specifications unique to this variant
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SpecificationsSection
+                  title=""
+                  description=""
+                  specifications={variantSpecs}
+                  setSpecifications={setVariantSpecs}
+                  newSpec={newVariantSpec}
+                  setNewSpec={setNewVariantSpec}
+                  handleAddSpecification={handleAddVariantSpecification}
+                  handleRemoveSpecification={handleRemoveVariantSpecification}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-        {/* Variant Details (Color, Storage, RAM, SKU) */}
-        <VariantDetailsSection
-          variantData={variantData}
-          setVariantData={setVariantData}
-        />
-
-        {/* Descriptions */}
-        <DescriptionsSection
-          localizationData={localizationData}
-          setLocalizationData={setLocalizationData}
-        />
-
-        <Separator className="bg-gray-800" />
-
-        {/* Product-Level Specifications */}
-        <SpecificationsSection
-          title="Product Specifications"
-          description="Specifications that apply to all variants of this product"
-          specifications={productSpecs}
-          setSpecifications={setProductSpecs}
-          newSpec={newProductSpec}
-          setNewSpec={setNewProductSpec}
-          handleAddSpecification={handleAddProductSpecification}
-          handleRemoveSpecification={handleRemoveProductSpecification}
-        />
-
-        <Separator className="bg-gray-800" />
-
-        {/* Variant-Level Specifications */}
-        <SpecificationsSection
-          title="Variant Specifications"
-          description="Specifications specific to this variant (color, storage, etc.)"
-          specifications={variantSpecs}
-          setSpecifications={setVariantSpecs}
-          newSpec={newVariantSpec}
-          setNewSpec={setNewVariantSpec}
-          handleAddSpecification={handleAddVariantSpecification}
-          handleRemoveSpecification={handleRemoveVariantSpecification}
-        />
-
-        <Separator className="bg-gray-800" />
-
-        {/* Pricing Section */}
-        <PricingSection
-          prices={prices}
-          setPrices={setPrices}
-        />
-      </CardContent>
-    </Card>
+        {/* Pricing */}
+        <TabsContent value="pricing" className="space-y-4">
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg text-white">Initial Pricing</CardTitle>
+              <CardDescription className="text-gray-400 text-sm">
+                Add initial prices for this variant (optional)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PricingSection
+                prices={prices}
+                setPrices={setPrices}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
+

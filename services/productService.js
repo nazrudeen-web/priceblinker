@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 
 export class ProductService {
@@ -38,11 +37,11 @@ export class ProductService {
   // Fetch product data from Best Buy API
   static async fetchBestBuyProduct(sku) {
     const apiKey = process.env.NEXT_PUBLIC_BESTBUY_KEY;
-    
+
     if (!apiKey) {
       throw new Error("Missing NEXT_PUBLIC_BESTBUY_KEY environment variable");
     }
-    
+
     const response = await fetch(
       `https://api.bestbuy.com/v1/products/${sku}.json?apiKey=${apiKey}&format=json&show=sku,name,manufacturer,modelNumber,shortDescription,longDescription,color,details.name,details.value,features.feature,includedItemList.includedItem,images,url`
     );
@@ -58,11 +57,11 @@ export class ProductService {
   // Extract variant info (color, storage, RAM) from product data
   static extractVariantInfo(data) {
     const color = data.color || "";
-    
+
     // Extract storage from details or specifications
     let storage = "";
     let ram = "";
-    
+
     if (data.details) {
       // Look for storage-related details
       const storageDetail = data.details.find(d => 
@@ -73,7 +72,7 @@ export class ProductService {
           d.name.toLowerCase().includes('capacity')
         )
       );
-      
+
       // Look for RAM-related details  
       const ramDetail = data.details.find(d => 
         d.name && (
@@ -82,7 +81,7 @@ export class ProductService {
           d.name.toLowerCase().includes('memory')
         )
       );
-      
+
       // Look for battery details that might be incorrectly mapped
       const batteryDetail = data.details.find(d => 
         d.name && (
@@ -90,17 +89,17 @@ export class ProductService {
           d.name.toLowerCase().includes('milliampere')
         )
       );
-      
+
       if (storageDetail && !storageDetail.value.toLowerCase().includes('milliampere') && 
           !storageDetail.value.toLowerCase().includes('fps')) {
         storage = storageDetail.value || "";
       }
-      
+
       if (ramDetail && !ramDetail.value.toLowerCase().includes('milliampere') && 
           !ramDetail.value.toLowerCase().includes('fps')) {
         ram = ramDetail.value || "";
       }
-      
+
       // If storage is still empty, try to find it from name patterns
       if (!storage) {
         const possibleStorage = data.details.find(d => 
@@ -140,10 +139,10 @@ export class ProductService {
 
     allSpecs.forEach(item => {
       if (!item.name || !item.value) return;
-      
+
       const nameLower = item.name.toLowerCase();
       const valueLower = item.value.toLowerCase();
-      
+
       // Skip excluded keywords
       if (this.excludeKeywords.some(keyword => nameLower.includes(keyword))) {
         return;
@@ -184,7 +183,7 @@ export class ProductService {
       longDescription: longDescriptionRaw,
       sku: data.sku,
       productSpecs,
-      
+
       // Variant level data
       variantInfo,
       variantSpecs,
@@ -206,7 +205,7 @@ export class ProductService {
     // Check if product already exists by category and base name
     let product_id;
     const baseProductName = localizationData.name.split(' - ')[0]; // Remove variant specific parts
-    
+
     const { data: existingProduct } = await supabase
       .from("products")
       .select("id")
@@ -454,5 +453,27 @@ export class ProductService {
     }
 
     return { productId, deletedProduct: remainingVariants.length === 0 };
+  }
+
+  static async addPrice(priceData) {
+    try {
+      const { error } = await supabase
+        .from("product_prices")
+        .insert({
+          product_variant_id: priceData.product_variant_id,
+          store_name: priceData.store_name,
+          country: priceData.country,
+          price: priceData.price,
+          currency: priceData.currency,
+          affiliate_link: priceData.affiliate_link,
+        });
+
+      if (error) throw error;
+
+      return { message: "Price added successfully!" };
+    } catch (error) {
+      console.error("Error adding price:", error);
+      throw new Error(`Failed to add price: ${error.message}`);
+    }
   }
 }

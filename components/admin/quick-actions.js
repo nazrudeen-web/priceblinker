@@ -14,21 +14,21 @@ import { Package, Store, DollarSign } from "lucide-react";
 const quickActions = [
   {
     title: "Add Product",
-    description: "Add a new product to track",
+    description: "Add a new product variant",
     icon: Package,
-    href: "/admin/products/new",
-  },
-  {
-    title: "Add Store",
-    description: "Register a new store",
-    icon: Store,
-    href: "/admin/stores/new",
+    href: "/admin/products/new-product",
   },
   {
     title: "Add Price",
     description: "Add price for existing product",
     icon: DollarSign,
-    href: "/admin/prices/new",
+    href: "/admin/prices/add",
+  },
+  {
+    title: "Manage Products",
+    description: "View and edit all products",
+    icon: Store,
+    href: "/admin/products",
   },
 ];
 
