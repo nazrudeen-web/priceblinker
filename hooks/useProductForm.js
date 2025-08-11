@@ -41,7 +41,7 @@ export function useProductForm() {
   const [variantSpecs, setVariantSpecs] = useState([]);
   const [images, setImages] = useState([]);
   const [availability, setAvailability] = useState([{ country: "PH" }]);
-  const [prices, setPrices] = useState([]);
+  
   
   // Form states
   const [fetchedData, setFetchedData] = useState(null);
@@ -204,7 +204,7 @@ export function useProductForm() {
         variantSpecs,
         images,
         availability,
-        prices,
+        
       };
 
       const result = await ProductService.saveProductWithVariant(dataToSave);
@@ -255,7 +255,7 @@ export function useProductForm() {
     setVariantSpecs([]);
     setImages([]);
     setAvailability([{ country: "PH" }]);
-    setPrices([]);
+    
     setFetchedData(null);
     setSku("");
   };
@@ -275,8 +275,7 @@ export function useProductForm() {
     images,
     setImages,
     availability,
-    prices,
-    setPrices,
+    
     fetchedData,
     isFetching,
     isSaving,

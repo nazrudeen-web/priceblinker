@@ -64,8 +64,6 @@ export default function NewProductPage() {
     images,
     setImages,
     availability,
-    prices,
-    setPrices,
     handleCountryToggle,
     fetchedData,
     sku,

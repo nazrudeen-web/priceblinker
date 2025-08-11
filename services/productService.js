@@ -200,7 +200,6 @@ export class ProductService {
     variantSpecs,
     images,
     availability,
-    prices,
   }) {
     // Check if product already exists by category and base name
     let product_id;
@@ -321,19 +320,7 @@ export class ProductService {
 
     if (imageError) throw imageError;
 
-    // Insert variant prices
-    if (prices && prices.length > 0) {
-      const pricesToInsert = prices.map((price) => ({ 
-        product_variant_id: variant_id, 
-        ...price 
-      }));
-
-      const { error: priceError } = await supabase
-        .from("product_prices")
-        .insert(pricesToInsert);
-
-      if (priceError) throw priceError;
-    }
+    
 
     return { product_id, variant_id };
   }

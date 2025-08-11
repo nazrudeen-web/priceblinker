@@ -18,7 +18,7 @@ import ProductDetailsSection from "./BasicInfoTab/ProductDetailsSection";
 import VariantDetailsSection from "./BasicInfoTab/VariantDetailsSection";
 import DescriptionsSection from "./BasicInfoTab/DescriptionsSection";
 import SpecificationsSection from "./BasicInfoTab/SpecificationsSection";
-import PricingSection from "./BasicInfoTab/PricingSection";
+
 
 export default function BasicInfoTab({
   productData,
@@ -31,8 +31,7 @@ export default function BasicInfoTab({
   setProductSpecs,
   variantSpecs,
   setVariantSpecs,
-  prices,
-  setPrices,
+  
   handleNameChange,
   fetchedData,
   sku,
@@ -95,7 +94,7 @@ export default function BasicInfoTab({
 
       {/* Sub-tabs for organization */}
       <Tabs defaultValue="basic" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 bg-gray-800">
+        <TabsList className="grid w-full grid-cols-3 bg-gray-800">
           <TabsTrigger value="basic" className="data-[state=active]:bg-gray-700 text-sm">
             Basic
           </TabsTrigger>
@@ -104,9 +103,6 @@ export default function BasicInfoTab({
           </TabsTrigger>
           <TabsTrigger value="specs" className="data-[state=active]:bg-gray-700 text-sm">
             Specs
-          </TabsTrigger>
-          <TabsTrigger value="pricing" className="data-[state=active]:bg-gray-700 text-sm">
-            Pricing
           </TabsTrigger>
         </TabsList>
 
@@ -226,23 +222,7 @@ export default function BasicInfoTab({
           </div>
         </TabsContent>
 
-        {/* Pricing */}
-        <TabsContent value="pricing" className="space-y-4">
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-white">Initial Pricing</CardTitle>
-              <CardDescription className="text-gray-400 text-sm">
-                Add initial prices for this variant (optional)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PricingSection
-                prices={prices}
-                setPrices={setPrices}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+        
       </Tabs>
     </div>
   );

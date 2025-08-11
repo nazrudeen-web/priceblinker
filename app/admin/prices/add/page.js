@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -34,7 +33,7 @@ export default function AddPricePage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
   // Price form data
   const [priceData, setPriceData] = useState({
     store_name: "",
@@ -67,7 +66,7 @@ export default function AddPricePage() {
     try {
       setLoading(true);
       const productsData = await ProductService.getAllProductsWithVariants();
-      
+
       // Transform data for easier searching
       const transformedProducts = [];
       productsData.forEach((product) => {
@@ -88,7 +87,7 @@ export default function AddPricePage() {
           }
         });
       });
-      
+
       setProducts(transformedProducts);
       setFilteredProducts(transformedProducts);
     } catch (error) {
@@ -115,7 +114,7 @@ export default function AddPricePage() {
 
     try {
       setSaving(true);
-      
+
       await ProductService.addPrice({
         product_variant_id: selectedProduct.id,
         ...priceData,
@@ -210,26 +209,14 @@ export default function AddPricePage() {
                         : "bg-gray-800 hover:bg-gray-700 border border-gray-700"
                     }`}
                   >
-                    <div className="font-medium text-white">{product.name}</div>
-                    <div className="text-sm text-gray-400">
+                    <div className="font-medium text-white text-sm">{product.name}</div>
+                    <div className="text-xs text-gray-400 mt-1">
                       SKU: {product.sku} | Brand: {product.brand}
                     </div>
-                    <div className="flex gap-1 mt-1">
-                      {product.color && (
-                        <Badge variant="outline" className="text-xs">
-                          {product.color}
-                        </Badge>
-                      )}
-                      {product.storage && (
-                        <Badge variant="outline" className="text-xs">
-                          {product.storage}
-                        </Badge>
-                      )}
-                      {product.ram && (
-                        <Badge variant="outline" className="text-xs">
-                          {product.ram}
-                        </Badge>
-                      )}
+                    <div className="flex gap-1 mt-2">
+                      {product.color && <Badge variant="secondary" className="text-xs">{product.color}</Badge>}
+                      {product.storage && <Badge variant="secondary" className="text-xs">{product.storage}</Badge>}
+                      {product.ram && <Badge variant="secondary" className="text-xs">{product.ram}</Badge>}
                     </div>
                   </div>
                 ))}
