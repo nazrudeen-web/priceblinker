@@ -1,0 +1,86 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.product_availability (
+  product_id uuid,
+  country text,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  CONSTRAINT product_availability_pkey PRIMARY KEY (id),
+  CONSTRAINT product_availability_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
+);
+CREATE TABLE public.product_prices (
+  product_variant_id uuid NOT NULL,
+  store_name text,
+  country text,
+  price numeric,
+  affiliate_link text,
+  currency text,
+  valid_from timestamp with time zone,
+  valid_to timestamp with time zone,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT product_prices_pkey PRIMARY KEY (id),
+  CONSTRAINT product_prices_product_variant_id_fkey FOREIGN KEY (product_variant_id) REFERENCES public.product_variants(id)
+);
+CREATE TABLE public.product_specifications (
+  product_id uuid,
+  key text,
+  value text,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  CONSTRAINT product_specifications_pkey PRIMARY KEY (id),
+  CONSTRAINT product_specifications_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
+);
+CREATE TABLE public.product_variant_images (
+  product_variant_id uuid NOT NULL,
+  image_url text NOT NULL,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  is_main boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT product_variant_images_pkey PRIMARY KEY (id),
+  CONSTRAINT product_variant_images_product_variant_id_fkey FOREIGN KEY (product_variant_id) REFERENCES public.product_variants(id)
+);
+CREATE TABLE public.product_variant_localizations (
+  country text,
+  language text,
+  name text,
+  brand text,
+  short_description text,
+  long_description text,
+  meta_title text,
+  meta_description text,
+  canonical_url text,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  product_variant_id uuid,
+  CONSTRAINT product_variant_localizations_pkey PRIMARY KEY (id),
+  CONSTRAINT product_variant_localizations_product_variant_id_fkey FOREIGN KEY (product_variant_id) REFERENCES public.product_variants(id)
+);
+CREATE TABLE public.product_variant_specifications (
+  product_variant_id uuid NOT NULL,
+  key text NOT NULL,
+  value text,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT product_variant_specifications_pkey PRIMARY KEY (id),
+  CONSTRAINT product_variant_specifications_product_variant_id_fkey FOREIGN KEY (product_variant_id) REFERENCES public.product_variants(id)
+);
+CREATE TABLE public.product_variants (
+  product_id uuid NOT NULL,
+  storage text,
+  ram text,
+  color text,
+  sku text UNIQUE,
+  slug text UNIQUE,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  status text DEFAULT 'active'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT product_variants_pkey PRIMARY KEY (id),
+  CONSTRAINT product_variants_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
+);
+CREATE TABLE public.products (
+  slug text UNIQUE,
+  status text,
+  category text,
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT products_pkey PRIMARY KEY (id)
+);
